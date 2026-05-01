@@ -29,6 +29,23 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     return this._connected;
   }
 
+  async ping() {
+    try {
+      if (!this._connected) {
+        await this.$connect();
+        this._connected = true;
+        console.info('Prisma connected (ping)');
+      }
+      // lightweight check
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (this as any).$queryRaw`SELECT 1`;
+      return true;
+    } catch (err) {
+      console.error('Prisma ping failed:', err);
+      return false;
+    }
+  }
+
   async onModuleDestroy() {
     try {
       await this.$disconnect();

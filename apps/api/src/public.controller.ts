@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, ServiceUnavailableException } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { PrismaService } from './prisma.service';
 import { CarQueryDto, LeadDto, LeadType } from './dto';
@@ -12,6 +12,13 @@ export class PublicController {
   async health() {
     const db = this.prisma.isConnected() ? 'ok' : 'down';
     return { ok: true, db };
+  }
+
+  @Get('ready')
+  async ready() {
+    const ok = await (this.prisma as any).ping?.() ?? false;
+    if (!ok) throw new ServiceUnavailableException('DB unavailable');
+    return { ok: true, db: 'ok' };
   }
 
   @Get('cars')

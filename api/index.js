@@ -25,10 +25,15 @@ async function getHandler() {
 
 module.exports = async function (req, res) {
   try {
+    console.log(`[api/index] ${req.method} ${req.url}`);
+  } catch (err) {
+    /* ignore logging errors */
+  }
+  try {
     const handler = await getHandler();
     return handler(req, res);
   } catch (err) {
-    console.error('API handler error:', err);
+    console.error('API handler error:', err && err.stack ? err.stack : err);
     res.statusCode = 500;
     res.end('Internal Server Error');
   }
