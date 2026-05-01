@@ -66,11 +66,12 @@ h2 { font-size: clamp(28px, 4vw, 48px); margin: 0 0 18px; }
 textarea { padding: 12px; min-height: 110px; resize: vertical; }
 .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .card {
-  background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.025)); border-radius: 8px;
+  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.025)); border-radius: 8px;
   overflow: hidden; border: 1px solid rgba(255,255,255,.08); transform: translateY(0); animation: reveal .55s ease both;
+  box-shadow: 0 18px 42px rgba(0,0,0,.28);
 }
-.card:hover { border-color: rgba(255,0,0,.45); box-shadow: 0 0 28px rgba(255,0,0,.16); }
-.photo { aspect-ratio: 4 / 3; display: grid; place-items: center; background: radial-gradient(ellipse at bottom, rgba(255,0,0,.14), transparent 55%), #080808; }
+.card:hover { border-color: rgba(255,0,0,.45); box-shadow: 0 0 28px rgba(255,0,0,.16), 0 22px 52px rgba(0,0,0,.4); transform: translateY(-2px); }
+.photo { aspect-ratio: 4 / 3; display: grid; place-items: center; background: radial-gradient(ellipse at bottom, rgba(255,0,0,.14), transparent 55%), #080808; padding: 6px; }
 .photo img { width: 100%; height: 100%; object-fit: contain; }
 .card-body { padding: 16px; }
 .meta { color: var(--muted); font-size: 14px; }
@@ -93,11 +94,71 @@ textarea { padding: 12px; min-height: 110px; resize: vertical; }
 .spec span:first-child { color: var(--muted); }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
 .toast { position: fixed; right: 18px; bottom: 18px; background: #191919; border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; z-index: 80; }
-.admin-shell { display: grid; grid-template-columns: 230px 1fr; min-height: 100vh; }
-.sidebar { padding: 24px; background: #080808; border-right: 1px solid rgba(255,0,0,.18); }
+.admin-shell { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; background: radial-gradient(circle at top right, rgba(255,0,0,.14), transparent 440px), #050505; }
+.sidebar { position: sticky; top: 0; height: 100vh; padding: 24px; background: rgba(8,8,8,.86); border-right: 1px solid rgba(255,0,0,.22); backdrop-filter: blur(18px); }
 .table { width: 100%; border-collapse: collapse; }
 .table th, .table td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,.08); text-align: left; vertical-align: top; }
 .mobile-menu { display: none; }
+.compact { min-height: 34px; padding: 0 11px; font-size: 13px; }
+.admin-brand { display: grid; gap: 0; padding: 14px; border: 1px solid rgba(255,0,0,.35); border-radius: 8px; background: linear-gradient(135deg, rgba(255,0,0,.18), rgba(255,255,255,.04)); box-shadow: 0 0 34px rgba(255,0,0,.12); }
+.admin-brand span { color: #ff3333; font-size: 13px; font-weight: 800; }
+.admin-brand strong { font-size: 24px; letter-spacing: 0; }
+.admin-nav { display: grid; gap: 8px; margin-top: 28px; }
+.admin-nav a, .admin-nav button { min-height: 42px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #d9d9d9; display: flex; align-items: center; padding: 0 12px; text-align: left; }
+.admin-nav a:hover, .admin-nav button:hover, .admin-nav .active { border-color: rgba(255,0,0,.35); background: rgba(255,0,0,.09); color: white; box-shadow: inset 3px 0 0 var(--red); }
+.admin-main { min-width: 0; }
+.admin-topbar { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 28px; border-bottom: 1px solid rgba(255,0,0,.16); background: rgba(7,7,7,.62); backdrop-filter: blur(16px); position: sticky; top: 0; z-index: 20; }
+.admin-topbar strong { font-size: 18px; }
+.admin-userbar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
+.admin-status { min-height: 28px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.12); color: #aaa; background: rgba(255,255,255,.04); font-size: 12px; }
+.admin-status.ok { color: #63e6a3; border-color: rgba(99,230,163,.32); }
+.admin-status.down { color: #ff7777; border-color: rgba(255,0,0,.42); }
+.admin-content { width: min(1320px, calc(100% - 32px)); margin: 0 auto; padding: 34px 0 56px; }
+.admin-page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 22px; }
+.admin-page-head h1 { margin: 6px 0 0; font-size: clamp(34px, 5vw, 58px); }
+.admin-panel, .stat-card, .login-card {
+  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.035));
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 8px;
+  box-shadow: 0 24px 70px rgba(0,0,0,.36), inset 0 1px 0 rgba(255,255,255,.05);
+  backdrop-filter: blur(18px);
+  padding: 18px;
+}
+.admin-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.stat-card span { color: var(--muted); font-size: 13px; }
+.stat-card strong { display: block; margin-top: 8px; font-size: 32px; }
+.admin-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.admin-panel h2 { font-size: 22px; margin: 0 0 14px; }
+.list-item { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.08); }
+.list-item p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+.quick-actions, .editor-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+.admin-tools { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+.admin-table th { color: #bdbdbd; font-size: 12px; text-transform: uppercase; }
+.admin-table tr:hover td { background: rgba(255,0,0,.035); }
+.admin-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.car-cell { display: flex; align-items: center; gap: 12px; min-width: 260px; }
+.car-cell img, .image-placeholder { width: 86px; height: 64px; object-fit: contain; border-radius: 8px; background: #080808; border: 1px solid rgba(255,255,255,.08); }
+.empty-state { min-height: 120px; display: grid; place-items: center; color: var(--muted); border: 1px dashed rgba(255,255,255,.14); border-radius: 8px; background: rgba(255,255,255,.025); }
+.admin-skeleton { min-height: 260px; border-radius: 8px; background: linear-gradient(90deg, rgba(255,255,255,.04), rgba(255,255,255,.09), rgba(255,255,255,.04)); animation: shimmer 1.4s infinite; }
+.form-error { color: #ff8b8b; border: 1px solid rgba(255,0,0,.28); background: rgba(255,0,0,.08); border-radius: 8px; padding: 10px 12px; }
+.admin-form { display: grid; gap: 16px; }
+.form-section h2 { font-size: 20px; margin: 0 0 14px; }
+.toggle-row { margin-top: 14px; color: #ddd; }
+.upload-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+.photo-admin-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.photo-admin-card { position: relative; border-radius: 8px; border: 1px solid rgba(255,255,255,.1); background: #090909; padding: 8px; }
+.photo-admin-card img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; display: block; }
+.cover-badge { position: absolute; left: 14px; top: 14px; min-height: 24px; padding: 0 8px; display: inline-flex; align-items: center; border-radius: 8px; background: var(--red); font-size: 12px; font-weight: 700; }
+.photo-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.compact-select { min-width: 150px; }
+.admin-login { min-height: 100vh; display: grid; place-items: center; padding: 20px; background: radial-gradient(circle at 50% 18%, rgba(255,0,0,.24), transparent 360px), #050505; }
+.login-card { width: min(430px, 100%); display: grid; gap: 14px; padding: 28px; box-shadow: 0 0 70px rgba(255,0,0,.16), 0 24px 80px rgba(0,0,0,.5); }
+.login-card h1 { font-size: 56px; margin: 0; }
+.login-logo { width: 92px; height: 92px; display: grid; place-items: center; border-radius: 8px; border: 1px solid rgba(255,0,0,.42); color: white; font-weight: 900; text-align: center; background: rgba(255,0,0,.12); box-shadow: 0 0 38px rgba(255,0,0,.18); }
+.drawer-backdrop { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.68); display: flex; justify-content: flex-end; }
+.lead-drawer { width: min(460px, 100%); height: 100%; overflow: auto; background: #090909; border-left: 1px solid rgba(255,0,0,.22); padding: 22px; box-shadow: -22px 0 70px rgba(0,0,0,.46); }
+.payload { white-space: pre-wrap; overflow: auto; padding: 12px; border-radius: 8px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); }
+@keyframes shimmer { 0% { background-position: -240px 0; } 100% { background-position: 240px 0; } }
 @keyframes reveal { from { opacity: 0; transform: translateY(18px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes pulse { 50% { box-shadow: 0 0 24px rgba(255,0,0,.35); } }
 @media (prefers-reduced-motion: reduce) { *, html { animation: none !important; scroll-behavior: auto; } }
@@ -107,6 +168,10 @@ textarea { padding: 12px; min-height: 110px; resize: vertical; }
   .hero-grid, .detail, .admin-shell { grid-template-columns: 1fr; }
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .toolbar, .form-grid { grid-template-columns: 1fr 1fr; }
+  .sidebar { position: static; height: auto; }
+  .admin-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .admin-stats, .admin-grid-2, .admin-tools, .photo-admin-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-topbar, .admin-page-head { align-items: flex-start; flex-direction: column; }
 }
 @media (max-width: 620px) {
   .container { width: min(100% - 20px, 1180px); }
@@ -115,4 +180,8 @@ textarea { padding: 12px; min-height: 110px; resize: vertical; }
   .nav { min-height: 68px; }
   .showroom-car { min-height: 240px; }
   .thumbs { grid-template-columns: repeat(4, 1fr); }
+  .admin-content { width: min(100% - 20px, 1180px); padding-top: 22px; }
+  .admin-nav, .admin-stats, .admin-grid-2, .admin-tools, .photo-admin-grid, .upload-row { grid-template-columns: 1fr; }
+  .admin-table { display: block; overflow-x: auto; }
+  .admin-actions { justify-content: flex-start; }
 }

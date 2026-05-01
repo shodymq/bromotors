@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bromotors-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bromotors
+      POSTGRES_USER: bromotors
+      POSTGRES_PASSWORD: bromotors
+    ports:
+      - "5433:5432"
+    volumes:
+      - bromotors_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bromotors -d bromotors"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  bromotors_postgres:

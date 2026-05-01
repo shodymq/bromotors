@@ -4,7 +4,14 @@
 
 ## Local setup
 
-Нужен локальный PostgreSQL на `localhost:5432`. Создайте пользователя и базу под значения из `.env.example`:
+Быстрее всего поднять локальный PostgreSQL через Docker Compose:
+
+```bash
+cp .env.example .env
+docker compose up -d
+```
+
+По умолчанию база доступна на `localhost:5433`. Если Docker недоступен, поднимите PostgreSQL вручную и создайте пользователя и базу под значения из `.env.example`:
 
 ```bash
 psql -d postgres -c "CREATE ROLE bromotors WITH LOGIN PASSWORD 'bromotors' CREATEDB;"
@@ -12,7 +19,6 @@ psql -d postgres -c "CREATE DATABASE bromotors OWNER bromotors;"
 ```
 
 ```bash
-cp .env.example .env
 npm install
 npm run db:generate
 npm run db:migrate -- --name init
