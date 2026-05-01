@@ -9,3 +9,4 @@ coverage
 *.tsbuildinfo
 apps/web/public/uploads/tmp
 apps/api/uploads/tmp
+.vercel

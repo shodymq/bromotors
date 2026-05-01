@@ -1,4 +1,6 @@
 {
+  "buildCommand": "npm run build -w @bromotors/db && npm run build -w @bromotors/api",
+  "outputDirectory": ".",
   "rewrites": [
     {
       "source": "/",
