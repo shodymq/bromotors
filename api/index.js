@@ -1,5 +1,28 @@
 // Proxy entry for Vercel Serverless function — forwards requests to built Nest serverless handler
 const path = require('path');
+const Module = require('module');
+
+// Fallback: if '@bromotors/db' can't be resolved by Node (happens when Vercel packages workspace differently),
+// redirect resolution to the local packages/db/index.js file included in the repo.
+try {
+  const _resolve = Module._resolveFilename;
+  Module._resolveFilename = function (request, parent, isMain, options) {
+    if (request === '@bromotors/db') {
+      try {
+        // try normal resolution first
+        return _resolve.call(this, request, parent, isMain, options);
+      } catch (err) {
+        // fallback to repo-local packages/db/index.js
+        const local = path.join(__dirname, 'packages', 'db', 'index.js');
+        return local;
+      }
+    }
+    return _resolve.call(this, request, parent, isMain, options);
+  };
+} catch (err) {
+  // if we can't monkeypatch resolver, continue without fallback
+  console.warn('Could not setup module resolver fallback for @bromotors/db', err);
+}
 
 async function getHandler() {
   // prefer compiled dist handler if available
