@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+}
+
+enum CarStatus {
+  available
+  on_way
+  reserved
+  sold
+}
+
+enum LeadType {
+  question
+  trade_in
+  credit
+}
+
+enum LeadStatus {
+  new
+  in_progress
+  closed
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(admin)
+  createdAt    DateTime @default(now())
+}
+
+model Brand {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  models    Model[]
+  cars      Car[]
+
+  @@index([slug])
+}
+
+model Model {
+  id        String   @id @default(cuid())
+  brandId   String
+  name      String
+  slug      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  cars      Car[]
+
+  @@unique([brandId, slug])
+  @@index([brandId])
+}
+
+model Car {
+  id           String      @id @default(cuid())
+  brandId      String
+  modelId      String
+  slug         String      @unique
+  title        String
+  year         Int
+  price        Int
+  mileage      Int?
+  engineVolume String
+  bodyType     String?
+  fuelType     String?
+  transmission String?
+  driveType    String?
+  color        String?
+  description  String
+  status       CarStatus   @default(available)
+  isNewArrival Boolean     @default(false)
+  isPublished  Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  brand        Brand       @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  model        Model       @relation(fields: [modelId], references: [id], onDelete: Restrict)
+  images       CarImage[]
+  leads        Lead[]
+
+  @@index([brandId])
+  @@index([modelId])
+  @@index([status])
+  @@index([price])
+  @@index([year])
+  @@index([isPublished])
+}
+
+model CarImage {
+  id        String   @id @default(cuid())
+  carId     String
+  path      String
+  alt       String
+  sortOrder Int
+  isCover   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  car       Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+
+  @@index([carId])
+  @@index([isCover])
+}
+
+model Lead {
+  id        String     @id @default(cuid())
+  type      LeadType
+  carId     String?
+  name      String
+  phone     String
+  message   String?
+  payload   Json?
+  status    LeadStatus @default(new)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  car       Car?       @relation(fields: [carId], references: [id], onDelete: SetNull)
+
+  @@index([type])
+  @@index([carId])
+  @@index([status])
+  @@index([createdAt])
+}

@@ -1,0 +1,26 @@
+{
+  "name": "@bromotors/db",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "dotenv -e ../../.env -- prisma generate",
+    "prisma:generate": "dotenv -e ../../.env -- prisma generate",
+    "prisma:migrate": "dotenv -e ../../.env -- prisma migrate dev",
+    "seed": "dotenv -e ../../.env -- tsx prisma/seed-local.ts",
+    "smoke": "dotenv -e ../../.env -- tsx prisma/smoke-local.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "dotenv-cli": "^7.4.4",
+    "prisma": "^5.22.0",
+    "tsx": "^4.19.2",
+    "@types/bcryptjs": "^2.4.6"
+  },
+  "prisma": {
+    "seed": "dotenv -e ../../.env -- tsx prisma/seed-local.ts"
+  }
+}
