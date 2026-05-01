@@ -2,7 +2,7 @@
   "name": "@bromotors/db",
   "version": "0.1.0",
   "private": true,
-  "main": "src/index.ts",
+  "main": "index.js",
   "scripts": {
     "build": "dotenv -e ../../.env -- prisma generate",
     "prisma:generate": "dotenv -e ../../.env -- prisma generate",
