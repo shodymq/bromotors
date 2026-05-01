@@ -9,8 +9,9 @@ export class PublicController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get('health')
-  health() {
-    return { ok: true };
+  async health() {
+    const db = this.prisma.isConnected() ? 'ok' : 'down';
+    return { ok: true, db };
   }
 
   @Get('cars')
