@@ -15,12 +15,12 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { JwtService } from '@nestjs/jwt';
-import bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcryptjs';
 import { Response, Request } from 'express';
-import multer from 'multer';
-import path from 'node:path';
-import fs from 'node:fs';
-import sharp from 'sharp';
+import * as multer from 'multer';
+import * as path from 'node:path';
+import * as fs from 'node:fs';
+import sharp = require('sharp');
 import { PrismaService } from './prisma.service';
 import { BrandDto, CarDto, LoginDto, ModelDto, StatusDto } from './dto';
 import { publicCarInclude, slugify, cleanText } from './helpers';
