@@ -193,9 +193,19 @@ export class AdminController {
     return this.prisma.lead.findMany({ orderBy: { createdAt: 'desc' }, include: { car: { include: { brand: true, model: true } } } });
   }
 
+  @Get('leads/:id')
+  lead(@Param('id') id: string) {
+    return this.prisma.lead.findUnique({ where: { id }, include: { car: { include: { brand: true, model: true } } } });
+  }
+
   @Patch('leads/:id/status')
   updateLead(@Param('id') id: string, @Body() dto: StatusDto) {
     return this.prisma.lead.update({ where: { id }, data: { status: dto.status } });
+  }
+
+  @Delete('leads/:id')
+  deleteLead(@Param('id') id: string) {
+    return this.prisma.lead.delete({ where: { id } });
   }
 
   private carData(dto: CarDto, slug?: string) {
