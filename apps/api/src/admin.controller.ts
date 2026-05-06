@@ -22,7 +22,7 @@ import * as path from 'node:path';
 import * as fs from 'node:fs';
 import sharp = require('sharp');
 import { PrismaService } from './prisma.service';
-import { BrandDto, CarDto, LoginDto, ModelDto, StatusDto } from './dto';
+import { BrandDto, CarDto, CreditSettingDto, LoginDto, ModelDto, StatusDto } from './dto';
 import { publicCarInclude, slugify, cleanText } from './helpers';
 import { requireJwtSecret } from './auth.guard';
 
@@ -130,9 +130,9 @@ export class AdminController {
   }
 
   @Post('cars/:id/images')
-  @UseInterceptors(FilesInterceptor('files', 30, {
+  @UseInterceptors(FilesInterceptor('files', 50, {
     storage: multer.memoryStorage(),
-    limits: { files: 30, fileSize: 8 * 1024 * 1024 },
+    limits: { files: 50, fileSize: 10 * 1024 * 1024 },
     fileFilter: (_req, file, cb) => {
       cb(null, ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype));
     },
@@ -141,7 +141,7 @@ export class AdminController {
     const car = await this.prisma.car.findUniqueOrThrow({ where: { id } });
     if (!files?.length) throw new BadRequestException('Нет файлов');
     const current = await this.prisma.carImage.count({ where: { carId: id } });
-    if (current + files.length > 30) throw new BadRequestException('Максимум 30 фото');
+    if (current + files.length > 50) throw new BadRequestException('Максимум 50 фото');
     const target = path.join(uploadDir, car.slug);
     fs.mkdirSync(target, { recursive: true });
     const created = [];
@@ -188,6 +188,24 @@ export class AdminController {
     return { ok: true };
   }
 
+  @Get('credit-settings')
+  async getCreditSettings() {
+    let setting = await this.prisma.creditSetting.findFirst();
+    if (!setting) setting = await this.prisma.creditSetting.create({ data: {} });
+    return setting;
+  }
+
+  @Patch('credit-settings')
+  async updateCreditSettings(@Body() dto: CreditSettingDto) {
+    let setting = await this.prisma.creditSetting.findFirst();
+    if (!setting) {
+      setting = await this.prisma.creditSetting.create({ data: { rate: dto.rate, minDownPercent: dto.minDownPercent, maxMonths: dto.maxMonths } });
+    } else {
+      setting = await this.prisma.creditSetting.update({ where: { id: setting.id }, data: { rate: dto.rate, minDownPercent: dto.minDownPercent, maxMonths: dto.maxMonths } });
+    }
+    return setting;
+  }
+
   @Get('leads')
   leads() {
     return this.prisma.lead.findMany({ orderBy: { createdAt: 'desc' }, include: { car: { include: { brand: true, model: true } } } });
@@ -215,6 +233,7 @@ export class AdminController {
       description: cleanText(dto.description)!,
       status: dto.status,
       isNewArrival: Boolean(dto.isNewArrival),
+      isDiscount: Boolean(dto.isDiscount),
       isPublished: dto.isPublished ?? true,
     };
     return slug ? { ...data, slug } : data;

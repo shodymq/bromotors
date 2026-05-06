@@ -5,6 +5,7 @@ export type Car = {
   id: string; brandId: string; modelId: string; slug: string; title: string; year: number; price: number;
   mileage?: number | null; engineVolume: string; bodyType?: string | null; fuelType?: string | null;
   transmission?: string | null; driveType?: string | null; color?: string | null; description: string;
-  status: 'available' | 'on_way' | 'reserved' | 'sold'; isNewArrival: boolean; isPublished: boolean;
+  status: 'available' | 'on_way' | 'reserved' | 'sold'; isNewArrival: boolean; isDiscount: boolean; isPublished: boolean;
   brand: Brand; model: Model; images: CarImage[]; similar?: Car[];
 };
+export type CreditSetting = { rate: number; minDownPercent: number; maxMonths: number };

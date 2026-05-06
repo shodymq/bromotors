@@ -1,12 +1,12 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { Car, Brand } from '../lib/types';
+import { Car, Brand, CreditSetting } from '../lib/types';
 import { CarCard } from './CarCard';
 import { CompareBinder } from './Compare';
 
 type QuickFilter = '' | 'budget' | 'new_arrival' | 'suv';
 
-export function CatalogClient({ cars, brands }: { cars: Car[]; brands: Brand[] }) {
+export function CatalogClient({ cars, brands, credit }: { cars: Car[]; brands: Brand[]; credit?: CreditSetting }) {
   const [q, setQ] = useState('');
   const [brand, setBrand] = useState('');
   const [status, setStatus] = useState('');
@@ -83,7 +83,7 @@ export function CatalogClient({ cars, brands }: { cars: Car[]; brands: Brand[] }
       </div>
 
       {filtered.length ? (
-        <div className="grid">{filtered.map((car) => <CarCard key={car.id} car={car} />)}</div>
+        <div className="grid">{filtered.map((car) => <CarCard key={car.id} car={car} credit={credit} />)}</div>
       ) : (
         <div className="panel">Авто не найдены. Если фильтры пустые, проверьте API, миграции и seed.</div>
       )}

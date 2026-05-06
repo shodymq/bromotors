@@ -289,7 +289,30 @@ textarea { padding: 12px; min-height: 110px; resize: vertical; }
 .trust-check { color: #63e6a3; font-size: 18px; flex-shrink: 0; margin-top: 1px; }
 .trust-address { margin-top: 18px; display: grid; gap: 6px; }
 
-@keyframes shimmer { 0% { background-position: -240px 0; } 100% { background-position: 240px 0; } }
+/* ── Card monthly ─────────────────────────────────────── */
+.card-monthly { color: #ff8b8b; font-size: 13px; margin-top: -6px; margin-bottom: 6px; }
+.badge.discount { background: linear-gradient(135deg, #ff6b00, #ff0); border-color: #ff6b00; color: #000; font-weight: 700; }
+/* ── Drag & Drop Upload ───────────────────────────────── */
+.dd-wrap { display: grid; gap: 12px; }
+.dd-zone {
+  border: 2px dashed rgba(255,0,0,.35); border-radius: 10px; background: rgba(255,0,0,.04);
+  min-height: 120px; display: grid; place-items: center; cursor: pointer;
+  transition: border-color .18s, background .18s;
+}
+.dd-zone:hover, .dd-zone.dragging { border-color: var(--red); background: rgba(255,0,0,.09); }
+.dd-hint { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; padding: 20px; }
+.dd-preview-grid { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 10px; }
+.dd-preview-item { position: relative; border-radius: 8px; overflow: hidden; aspect-ratio: 4/3; background: #090909; border: 1px solid rgba(255,255,255,.1); }
+.dd-preview-item img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.dd-remove { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; background: rgba(0,0,0,.7); border: 1px solid rgba(255,255,255,.3); color: white; font-size: 11px; display: grid; place-items: center; padding: 0; }
+/* ── Skeleton loader ─────────────────────────────────── */
+.skeleton-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.skeleton-card { border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,.06); background: rgba(255,255,255,.04); }
+.skeleton-photo { aspect-ratio: 4/3; background: linear-gradient(90deg, rgba(255,255,255,.04) 25%, rgba(255,255,255,.09) 50%, rgba(255,255,255,.04) 75%); background-size: 600px 100%; animation: shimmer 1.4s infinite; }
+.skeleton-body { padding: 16px; display: grid; gap: 10px; }
+.skeleton-line { height: 14px; border-radius: 4px; background: rgba(255,255,255,.07); }
+.skeleton-line.short { width: 60%; }
+@keyframes shimmer { 0% { background-position: -600px 0; } 100% { background-position: 600px 0; } }
 @keyframes reveal { from { opacity: 0; transform: translateY(18px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes pulse { 50% { box-shadow: 0 0 24px rgba(255,0,0,.35); } }
 @media (prefers-reduced-motion: reduce) { *, html { animation: none !important; scroll-behavior: auto; } }
@@ -315,7 +338,8 @@ textarea { padding: 12px; min-height: 110px; resize: vertical; }
   .thumbs { grid-template-columns: repeat(4, 1fr); }
   .thumb { flex: 0 0 80px; height: 60px; }
   .admin-content { width: min(100% - 20px, 1180px); padding-top: 22px; }
-  .admin-nav, .admin-stats, .admin-grid-2, .admin-tools, .photo-admin-grid, .upload-row { grid-template-columns: 1fr; }
+  .admin-nav, .admin-stats, .admin-grid-2, .admin-tools, .photo-admin-grid, .upload-row, .dd-preview-grid { grid-template-columns: 1fr; }
+  .dd-preview-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .admin-table { display: block; overflow-x: auto; }
   .admin-actions { justify-content: flex-start; }
   .car-cta-row .btn { flex: 1 1 calc(50% - 5px); }

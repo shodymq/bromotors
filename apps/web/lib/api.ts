@@ -1,4 +1,4 @@
-import { Car, Brand, Model } from './types';
+import { Car, Brand, Model, CreditSetting } from './types';
 import { demoBrands, demoCars, demoModels, getDemoCar } from './demo-cars';
 
 const configuredApi = process.env.NEXT_PUBLIC_API_URL;
@@ -95,4 +95,25 @@ export async function getModels(): Promise<Model[]> {
   } catch {
     return demoModels;
   }
+}
+
+export const DEFAULT_CREDIT: CreditSetting = { rate: 22, minDownPercent: 20, maxMonths: 84 };
+
+export async function getCreditSettings(): Promise<CreditSetting> {
+  if (shouldUseDemo()) return DEFAULT_CREDIT;
+  try {
+    const res = await fetch(`${API}/credit-settings`, { next: { revalidate: 300 } });
+    if (!res.ok) return DEFAULT_CREDIT;
+    return res.json();
+  } catch {
+    return DEFAULT_CREDIT;
+  }
+}
+
+export function calcMonthlyPayment(price: number, credit: CreditSetting, downPercent?: number): number {
+  const down = Math.round(price * ((downPercent ?? credit.minDownPercent) / 100));
+  const principal = Math.max(0, price - down);
+  const monthlyRate = credit.rate / 100 / 12;
+  if (monthlyRate === 0) return Math.round(principal / credit.maxMonths);
+  return Math.round((principal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -credit.maxMonths)));
 }

@@ -61,7 +61,14 @@ export class CarDto {
   @IsString() @Length(10, 2000) description!: string;
   @IsEnum(CarStatus) status!: CarStatus;
   @IsOptional() @IsBoolean() @Transform(({ value }) => value === true || value === 'true') isNewArrival?: boolean;
+  @IsOptional() @IsBoolean() @Transform(({ value }) => value === true || value === 'true') isDiscount?: boolean;
   @IsOptional() @IsBoolean() @Transform(({ value }) => value === true || value === 'true') isPublished?: boolean;
+}
+
+export class CreditSettingDto {
+  @Type(() => Number) @IsInt() @Min(1) @Max(100) rate!: number;
+  @Type(() => Number) @IsInt() @Min(0) @Max(90) minDownPercent!: number;
+  @Type(() => Number) @IsInt() @Min(3) @Max(360) maxMonths!: number;
 }
 
 export class LeadDto {
