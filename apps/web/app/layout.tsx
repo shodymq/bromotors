@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { WhatsAppFloat } from '../components/WhatsAppFloat';
 
 export const metadata: Metadata = {
   title: 'BRO MOTORS — автосалон в Қызылорде',
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <div className="top-glow" />
         {children}
+        <WhatsAppFloat />
       </body>
     </html>
   );
