@@ -3,13 +3,15 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { MessageCircle, GitCompare, Info, FileText } from 'lucide-react';
-import { Car } from '../lib/types';
-import { carWhatsapp, money, statusLabel } from '../lib/api';
+import { Car, CreditSetting } from '../lib/types';
+import { carWhatsapp, calcMonthlyPayment, DEFAULT_CREDIT, money, statusLabel } from '../lib/api';
 import { LeadForm } from './LeadForm';
 
-export function CarCard({ car, compare = true }: { car: Car; compare?: boolean }) {
+export function CarCard({ car, compare = true, credit }: { car: Car; compare?: boolean; credit?: CreditSetting }) {
   const cover = car.images.find((i) => i.isCover) || car.images[0];
   const [showLead, setShowLead] = useState(false);
+  const cs = credit || DEFAULT_CREDIT;
+  const monthly = calcMonthlyPayment(car.price, cs);
   return (
     <article className="card">
       <Link className="photo" href={`/catalog/${car.slug}`}>
@@ -18,11 +20,13 @@ export function CarCard({ car, compare = true }: { car: Car; compare?: boolean }
       <div className="card-body">
         <div className="row">
           <span className={`badge ${car.status}`}>{statusLabel(car.status)}</span>
-          {car.isNewArrival && <span className="badge new">NEW ARRIVAL</span>}
+          {car.isNewArrival && <span className="badge new">NEW</span>}
+          {car.isDiscount && <span className="badge discount">ВЫГОДНО</span>}
         </div>
         <h3>{car.brand.name} {car.model.name}</h3>
-        <div className="meta">{car.year} · двигатель {car.engineVolume} · пробег {car.mileage ? `${car.mileage} км` : 'уточнить'}</div>
+        <div className="meta">{car.year} · {car.engineVolume} · {car.mileage ? `${car.mileage} км` : 'новый'}</div>
         <div className="price">{money(car.price)}</div>
+        <div className="card-monthly">от {money(monthly)}/мес</div>
         <div className="row">
           <Link className="btn" href={`/catalog/${car.slug}`}><Info size={17} /> Подробнее</Link>
           <a className="btn primary" href={carWhatsapp(car)} target="_blank" rel="noopener noreferrer"><MessageCircle size={17} /> WhatsApp</a>

@@ -1,5 +1,5 @@
 'use client';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { DragEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { API, money, statusLabel } from '../lib/api';
@@ -42,6 +42,7 @@ function asCarDto(car: Car, patch: Partial<Car> = {}) {
     description: next.description,
     status: next.status,
     isNewArrival: next.isNewArrival,
+    isDiscount: next.isDiscount,
     isPublished: next.isPublished,
   };
 }
@@ -71,7 +72,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [user, setUser] = useState<AdminUser | null>(null);
   useEffect(() => { api('/admin/me').then(setUser).catch(() => location.href = '/admin/login'); }, []);
-  const links = [['Dashboard', '/admin'], ['Cars', '/admin/cars'], ['Brands', '/admin/brands'], ['Models', '/admin/models'], ['Leads', '/admin/leads']];
+  const links = [['Dashboard', '/admin'], ['Cars', '/admin/cars'], ['Brands', '/admin/brands'], ['Models', '/admin/models'], ['Leads', '/admin/leads'], ['Кредит', '/admin/credit']];
   return (
     <div className="admin-shell">
       <aside className="sidebar">
@@ -180,6 +181,79 @@ export function CarsAdmin() {
   );
 }
 
+function DragDropUpload({ carId, onDone, onError }: { carId: string; onDone: () => void; onError: (msg: string) => void }) {
+  const [previews, setPreviews] = useState<{ file: File; url: string }[]>([]);
+  const [dragging, setDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const addFiles = useCallback((files: FileList | File[]) => {
+    const valid = Array.from(files).filter((f) => ['image/jpeg', 'image/png', 'image/webp'].includes(f.type));
+    setPreviews((prev) => [...prev, ...valid.map((file) => ({ file, url: URL.createObjectURL(file) }))].slice(0, 50));
+  }, []);
+
+  function onDrop(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setDragging(false);
+    if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+  }
+
+  function remove(index: number) {
+    setPreviews((prev) => { URL.revokeObjectURL(prev[index].url); return prev.filter((_, i) => i !== index); });
+  }
+
+  async function upload() {
+    if (!previews.length) return;
+    setUploading(true);
+    const fd = new FormData();
+    previews.forEach((p) => fd.append('files', p.file));
+    const res = await fetch(`${API}/admin/cars/${carId}/images`, { method: 'POST', body: fd, credentials: 'include' });
+    setUploading(false);
+    if (res.ok) {
+      previews.forEach((p) => URL.revokeObjectURL(p.url));
+      setPreviews([]);
+      onDone();
+    } else {
+      onError(await res.text());
+    }
+  }
+
+  return (
+    <div className="dd-wrap">
+      <div
+        className={`dd-zone${dragging ? ' dragging' : ''}`}
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={onDrop}
+        onClick={() => inputRef.current?.click()}
+      >
+        <input ref={inputRef} type="file" multiple accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={(e) => e.target.files && addFiles(e.target.files)} />
+        <div className="dd-hint">
+          <span style={{ fontSize: 28 }}>📸</span>
+          <strong>Перетащите фото сюда или нажмите</strong>
+          <span className="meta">JPG, PNG, WEBP · до 50 фото · до 10 МБ каждое</span>
+        </div>
+      </div>
+      {previews.length > 0 && (
+        <>
+          <div className="dd-preview-grid">
+            {previews.map((p, i) => (
+              <div key={p.url} className="dd-preview-item">
+                <img src={p.url} alt="" />
+                <button className="dd-remove" onClick={() => remove(i)} aria-label="Удалить">✕</button>
+              </div>
+            ))}
+          </div>
+          <div className="row" style={{ marginTop: 12 }}>
+            <button className="btn primary" onClick={upload} disabled={uploading}>{uploading ? `Загрузка ${previews.length} фото...` : `Загрузить ${previews.length} фото`}</button>
+            <button className="btn ghost" onClick={() => { previews.forEach((p) => URL.revokeObjectURL(p.url)); setPreviews([]); }}>Очистить</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function CarEditor({ id }: { id?: string }) {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [models, setModels] = useState<Model[]>([]);
@@ -197,17 +271,19 @@ export function CarEditor({ id }: { id?: string }) {
     setSaving(true);
     setError('');
     const raw = Object.fromEntries(new FormData(event.currentTarget));
-    const body = { ...raw, year: Number(raw.year), price: Number(raw.price), mileage: raw.mileage ? Number(raw.mileage) : undefined, isNewArrival: raw.isNewArrival === 'on', isPublished: raw.isPublished === 'on' };
+    const body = {
+      ...raw,
+      year: Number(raw.year),
+      price: Number(raw.price),
+      mileage: raw.mileage ? Number(raw.mileage) : undefined,
+      isNewArrival: raw.isNewArrival === 'on',
+      isDiscount: raw.isDiscount === 'on',
+      isPublished: raw.isPublished === 'on',
+    };
     try {
       const saved = await api(id ? `/admin/cars/${id}` : '/admin/cars', { method: id ? 'PATCH' : 'POST', body: JSON.stringify(body) });
       location.href = `/admin/cars/${saved.id}/edit`;
     } catch (err) { setError(err instanceof Error ? err.message : 'Ошибка сохранения'); setSaving(false); }
-  }
-  async function upload(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!id) return;
-    const res = await fetch(`${API}/admin/cars/${id}/images`, { method: 'POST', body: new FormData(event.currentTarget), credentials: 'include' });
-    if (res.ok) await load(); else setError(await res.text());
   }
   async function setCover(imageId: string) { if (id) await api(`/admin/cars/${id}/images/${imageId}/cover`, { method: 'PATCH' }).then(load); }
   async function deleteImage(imageId: string) { if (id && confirm('Удалить фото?')) await api(`/admin/cars/${id}/images/${imageId}`, { method: 'DELETE' }).then(load); }
@@ -225,13 +301,80 @@ export function CarEditor({ id }: { id?: string }) {
       <div className="admin-page-head"><div><p className="eyebrow">Cars</p><h1>{id ? 'Редактировать авто' : 'Новое авто'}</h1></div><Link className="btn" href="/admin/cars">Отмена</Link></div>
       {error && <p className="form-error">{error}</p>}
       <form className="admin-form" onSubmit={submit} key={car?.id || 'new'}>
-        <section className="admin-panel form-section"><h2>Основное</h2><div className="form-grid"><select className="select" name="brandId" value={currentBrandId} onChange={(e) => setBrandId(e.target.value)}>{brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select><select className="select" name="modelId" defaultValue={car?.modelId || visibleModels[0]?.id}>{visibleModels.map((model) => <option key={model.id} value={model.id}>{model.brand?.name} {model.name}</option>)}</select><input className="field" name="title" defaultValue={car?.title} placeholder="Hyundai Sonata" required /><input className="field" name="year" type="number" min="1980" max="2035" defaultValue={car?.year} placeholder="Год" required /></div></section>
-        <section className="admin-panel form-section"><h2>Характеристики</h2><div className="form-grid"><input className="field" name="mileage" type="number" defaultValue={car?.mileage || ''} placeholder="Пробег" /><input className="field" name="engineVolume" defaultValue={car?.engineVolume} placeholder="Двигатель" required /><input className="field" name="bodyType" defaultValue={car?.bodyType || ''} placeholder="Кузов" /><input className="field" name="fuelType" defaultValue={car?.fuelType || ''} placeholder="Топливо" /><input className="field" name="transmission" defaultValue={car?.transmission || ''} placeholder="Коробка" /><input className="field" name="driveType" defaultValue={car?.driveType || ''} placeholder="Привод" /><input className="field" name="color" defaultValue={car?.color || ''} placeholder="Цвет" /></div></section>
-        <section className="admin-panel form-section"><h2>Цена и статус</h2><div className="form-grid"><input className="field" name="price" type="number" defaultValue={car?.price} placeholder="Цена" required /><select className="select" name="status" defaultValue={car?.status || 'available'}><option value="available">В наличии</option><option value="on_way">В пути</option><option value="reserved">Забронировано</option><option value="sold">Продано</option></select></div><div className="row toggle-row"><label><input name="isNewArrival" type="checkbox" defaultChecked={car?.isNewArrival} /> NEW ARRIVAL</label><label><input name="isPublished" type="checkbox" defaultChecked={car?.isPublished ?? true} /> Published</label></div></section>
+        <section className="admin-panel form-section">
+          <h2>Основное</h2>
+          <div className="form-grid">
+            <select className="select" name="brandId" value={currentBrandId} onChange={(e) => setBrandId(e.target.value)}>{brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select>
+            <select className="select" name="modelId" defaultValue={car?.modelId || visibleModels[0]?.id}>{visibleModels.map((model) => <option key={model.id} value={model.id}>{model.brand?.name} {model.name}</option>)}</select>
+            <input className="field" name="title" defaultValue={car?.title} placeholder="Hyundai Sonata" required />
+            <input className="field" name="year" type="number" min="1980" max="2035" defaultValue={car?.year} placeholder="Год" required />
+          </div>
+        </section>
+        <section className="admin-panel form-section">
+          <h2>Характеристики</h2>
+          <div className="form-grid">
+            <input className="field" name="mileage" type="number" defaultValue={car?.mileage || ''} placeholder="Пробег, км" />
+            <input className="field" name="engineVolume" defaultValue={car?.engineVolume} placeholder="Двигатель, л (напр. 2.0)" required />
+            <select className="select" name="bodyType" defaultValue={car?.bodyType || ''}>
+              <option value="">Кузов — выберите</option>
+              {['Седан','Хэтчбек','Внедорожник','Кроссовер','Минивэн','Купе','Универсал','Пикап'].map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+            <select className="select" name="fuelType" defaultValue={car?.fuelType || ''}>
+              <option value="">Топливо — выберите</option>
+              {['Бензин','Дизель','Газ','Гибрид','Электро'].map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+            <select className="select" name="transmission" defaultValue={car?.transmission || ''}>
+              <option value="">Коробка — выберите</option>
+              {['Автомат','Механика','Вариатор','Робот'].map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+            <select className="select" name="driveType" defaultValue={car?.driveType || ''}>
+              <option value="">Привод — выберите</option>
+              {['Передний','Задний','Полный'].map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+            <input className="field" name="color" defaultValue={car?.color || ''} placeholder="Цвет (напр. Белый)" />
+          </div>
+        </section>
+        <section className="admin-panel form-section">
+          <h2>Цена и статус</h2>
+          <div className="form-grid">
+            <input className="field" name="price" type="number" defaultValue={car?.price} placeholder="Цена, ₸" required />
+            <select className="select" name="status" defaultValue={car?.status || 'available'}>
+              <option value="available">В наличии</option>
+              <option value="on_way">В пути</option>
+              <option value="reserved">Забронировано</option>
+              <option value="sold">Продано</option>
+            </select>
+          </div>
+          <div className="row toggle-row" style={{ gap: 20, marginTop: 14 }}>
+            <label><input name="isNewArrival" type="checkbox" defaultChecked={car?.isNewArrival} /> NEW ARRIVAL</label>
+            <label><input name="isDiscount" type="checkbox" defaultChecked={car?.isDiscount} /> ВЫГОДНО</label>
+            <label><input name="isPublished" type="checkbox" defaultChecked={car?.isPublished ?? true} /> Опубликовано</label>
+          </div>
+        </section>
         <section className="admin-panel form-section"><h2>Описание</h2><textarea name="description" defaultValue={car?.description} required placeholder="Описание авто" /></section>
         <div className="editor-actions"><button className="btn primary" disabled={saving}>{saving ? 'Сохранение...' : 'Сохранить'}</button><Link className="btn" href="/admin/cars">Отмена</Link></div>
       </form>
-      {id && <section className="admin-panel form-section"><h2>Фото</h2><form onSubmit={upload} className="upload-row"><input className="field" type="file" name="files" multiple accept="image/jpeg,image/png,image/webp" /><button className="btn primary">Загрузить</button></form><div className="photo-admin-grid">{car?.images.sort((a, b) => a.sortOrder - b.sortOrder).map((image) => <div className="photo-admin-card" key={image.id}><img src={image.path} alt={image.alt} />{image.isCover && <span className="cover-badge">Cover</span>}<div className="photo-actions"><button className="btn compact ghost" onClick={() => moveImage(image.id, -1)}>Up</button><button className="btn compact ghost" onClick={() => moveImage(image.id, 1)}>Down</button><button className="btn compact" onClick={() => setCover(image.id)}>Cover</button><button className="btn compact ghost" onClick={() => deleteImage(image.id)}>Delete</button></div></div>)}</div></section>}
+
+      {id && (
+        <section className="admin-panel form-section" style={{ marginTop: 16 }}>
+          <h2>Фото ({car?.images.length || 0} / 50)</h2>
+          <DragDropUpload carId={id} onDone={load} onError={setError} />
+          <div className="photo-admin-grid" style={{ marginTop: 16 }}>
+            {car?.images.sort((a, b) => a.sortOrder - b.sortOrder).map((image) => (
+              <div className="photo-admin-card" key={image.id}>
+                <img src={image.path} alt={image.alt} />
+                {image.isCover && <span className="cover-badge">Cover</span>}
+                <div className="photo-actions">
+                  <button className="btn compact ghost" onClick={() => moveImage(image.id, -1)}>↑</button>
+                  <button className="btn compact ghost" onClick={() => moveImage(image.id, 1)}>↓</button>
+                  <button className="btn compact" onClick={() => setCover(image.id)}>Cover</button>
+                  <button className="btn compact ghost" onClick={() => deleteImage(image.id)}>✕</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </AdminLayout>
   );
 }
@@ -301,6 +444,53 @@ export function LeadsAdmin() {
       <div className="admin-page-head"><div><p className="eyebrow">Leads</p><h1>Лиды</h1></div></div>
       <div className="admin-panel"><div className="admin-tools"><select className="select" value={type} onChange={(e) => setType(e.target.value)}><option value="">Все типы</option><option value="question">Заявка</option><option value="trade_in">Trade-in</option><option value="credit">Кредит</option></select><select className="select" value={status} onChange={(e) => setStatusFilter(e.target.value)}><option value="">Все статусы</option><option value="new">new</option><option value="in_progress">in_progress</option><option value="closed">closed</option></select></div><table className="table admin-table"><thead><tr><th>Дата</th><th>Тип</th><th>Клиент</th><th>Авто</th><th>Статус</th><th></th></tr></thead><tbody>{filtered.map((lead) => <tr key={lead.id}><td>{new Date(lead.createdAt).toLocaleString('ru-KZ')}</td><td>{leadType(lead.type)}</td><td><strong>{lead.name}</strong><p className="meta">{lead.phone}</p></td><td>{lead.car ? `${lead.car.brand.name} ${lead.car.model.name}` : 'Без авто'}</td><td><select className="select compact-select" value={lead.status} onChange={(e) => setStatus(lead.id, e.target.value)}><option value="new">new</option><option value="in_progress">in_progress</option><option value="closed">closed</option></select></td><td className="admin-actions"><a className="btn compact primary" href={`https://wa.me/${lead.phone.replace(/\D/g, '')}`}>WhatsApp</a><button className="btn compact" onClick={() => setSelected(lead)}>Details</button></td></tr>)}</tbody></table>{!filtered.length && <EmptyState text="Лиды не найдены" />}</div>
       {selected && <div className="drawer-backdrop" onClick={() => setSelected(null)}><aside className="lead-drawer" onClick={(event) => event.stopPropagation()}><button className="btn ghost compact" onClick={() => setSelected(null)}>Close</button><h2>{selected.name}</h2><p className="meta">{leadType(selected.type)} · {new Date(selected.createdAt).toLocaleString('ru-KZ')}</p><div className="specs"><div className="spec"><span>Телефон</span><strong>{selected.phone}</strong></div><div className="spec"><span>Статус</span><strong>{leadStatus(selected.status)}</strong></div><div className="spec"><span>Авто</span><strong>{selected.car ? `${selected.car.brand.name} ${selected.car.model.name}` : 'Без авто'}</strong></div></div><h3>Сообщение</h3><p>{selected.message || 'Нет сообщения'}</p><h3>Payload</h3><pre className="payload">{JSON.stringify(selected.payload || {}, null, 2)}</pre></aside></div>}
+    </AdminLayout>
+  );
+}
+
+type CreditSettingData = { rate: number; minDownPercent: number; maxMonths: number };
+
+export function CreditSettingsAdmin() {
+  const [data, setData] = useState<CreditSettingData>({ rate: 22, minDownPercent: 20, maxMonths: 84 });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => { api('/admin/credit-settings').then(setData).catch(() => location.href = '/admin/login'); }, []);
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSaving(true); setError(''); setSaved(false);
+    const raw = Object.fromEntries(new FormData(e.currentTarget));
+    try {
+      await api('/admin/credit-settings', { method: 'PATCH', body: JSON.stringify({ rate: Number(raw.rate), minDownPercent: Number(raw.minDownPercent), maxMonths: Number(raw.maxMonths) }) });
+      setSaved(true);
+    } catch (err) { setError(err instanceof Error ? err.message : 'Ошибка'); }
+    finally { setSaving(false); }
+  }
+  return (
+    <AdminLayout>
+      <div className="admin-page-head"><div><p className="eyebrow">Настройки</p><h1>Кредитный калькулятор</h1></div></div>
+      <div className="admin-panel" style={{ maxWidth: 560 }}>
+        <p className="meta" style={{ marginBottom: 20 }}>Эти значения используются как начальные для кредитного калькулятора на сайте и для расчёта "от X ₸/мес" в карточках авто.</p>
+        <form className="admin-form" onSubmit={submit}>
+          <div className="form-grid">
+            <label>
+              <span className="meta">Процентная ставка, % годовых</span>
+              <input className="field" name="rate" type="number" min="1" max="100" step="0.1" defaultValue={data.rate} required />
+            </label>
+            <label>
+              <span className="meta">Мин. первоначальный взнос, %</span>
+              <input className="field" name="minDownPercent" type="number" min="0" max="90" step="1" defaultValue={data.minDownPercent} required />
+            </label>
+            <label>
+              <span className="meta">Максимальный срок, месяцев</span>
+              <input className="field" name="maxMonths" type="number" min="3" max="360" step="1" defaultValue={data.maxMonths} required />
+            </label>
+          </div>
+          {error && <p className="form-error">{error}</p>}
+          {saved && <p style={{ color: '#63e6a3', marginTop: 8 }}>Сохранено успешно</p>}
+          <button className="btn primary" disabled={saving} style={{ marginTop: 14 }}>{saving ? 'Сохранение...' : 'Сохранить настройки'}</button>
+        </form>
+      </div>
     </AdminLayout>
   );
 }

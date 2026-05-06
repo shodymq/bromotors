@@ -53,6 +53,12 @@ export class PublicController {
     return { ...car, similar };
   }
 
+  @Get('credit-settings')
+  async creditSettings() {
+    const setting = await this.prisma.creditSetting.findFirst();
+    return setting || { rate: 22, minDownPercent: 20, maxMonths: 84 };
+  }
+
   @Get('brands')
   async brands() {
     return this.prisma.brand.findMany({ orderBy: { name: 'asc' }, include: { models: { orderBy: { name: 'asc' } } } });

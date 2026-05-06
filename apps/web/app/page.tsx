@@ -1,14 +1,14 @@
 import { Header } from '../components/Header';
 import { CarCard } from '../components/CarCard';
 import { LeadForm } from '../components/LeadForm';
-import { getCarsResult, address, hours, wa } from '../lib/api';
+import { getCarsResult, getCreditSettings, address, hours, wa } from '../lib/api';
 import Image from 'next/image';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  const { cars, error } = await getCarsResult();
+  const [{ cars, error }, credit] = await Promise.all([getCarsResult(), getCreditSettings()]);
   const hero = cars[0]?.images.find((i) => i.isCover) || cars[0]?.images[0];
 
   const trustItems = [
@@ -42,7 +42,7 @@ export default async function Home() {
           <div className="container">
             <h2>Авто в продаже</h2>
             {error && <div className="panel" style={{ marginBottom: 18 }}>{error}. После `npm run db:seed` здесь появятся авто.</div>}
-            <div className="grid">{cars.slice(0, 3).map((car) => <CarCard key={car.id} car={car} />)}</div>
+            <div className="grid">{cars.slice(0, 3).map((car) => <CarCard key={car.id} car={car} credit={credit} />)}</div>
             {cars.length > 3 && (
               <div style={{ textAlign: 'center', marginTop: 28 }}>
                 <Link className="btn primary" href="/catalog">Смотреть все {cars.length} авто</Link>
