@@ -6,7 +6,7 @@ import { CarCard } from '../../../components/CarCard';
 import { CreditCalculator } from '../../../components/CreditCalculator';
 import { LeadForm } from '../../../components/LeadForm';
 import { Gallery } from './gallery';
-import { calcMonthlyPayment, carWhatsapp, getCar, getCreditSettings, money, phone, statusLabel } from '../../../lib/api';
+import { calcMonthlyPayment, carWhatsapp, getCar, getCreditSettings, km, money, phone, statusLabel } from '../../../lib/api';
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -25,7 +25,7 @@ export default async function CarPage({ params }: { params: Promise<{ slug: stri
 
   const specs = [
     ['Марка', car.brand.name], ['Модель', car.model.name], ['Год', car.year], ['Цена', money(car.price)],
-    car.mileage ? ['Пробег', `${car.mileage} км`] : null,
+    car.mileage ? ['Пробег', km(car.mileage)] : null,
     ['Двигатель', car.engineVolume],
     car.fuelType ? ['Топливо', car.fuelType] : null,
     car.transmission ? ['Коробка', car.transmission] : null,

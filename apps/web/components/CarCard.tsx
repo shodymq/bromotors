@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { MessageCircle, GitCompare, Info, FileText } from 'lucide-react';
 import { Car, CreditSetting } from '../lib/types';
-import { carWhatsapp, calcMonthlyPayment, DEFAULT_CREDIT, money, statusLabel } from '../lib/api';
+import { carWhatsapp, calcMonthlyPayment, DEFAULT_CREDIT, money, km, statusLabel } from '../lib/api';
 import { LeadForm } from './LeadForm';
 
 export function CarCard({ car, compare = true, credit }: { car: Car; compare?: boolean; credit?: CreditSetting }) {
@@ -24,7 +24,7 @@ export function CarCard({ car, compare = true, credit }: { car: Car; compare?: b
           {car.isDiscount && <span className="badge discount">ВЫГОДНО</span>}
         </div>
         <h3>{car.brand.name} {car.model.name}</h3>
-        <div className="meta">{car.year} · {car.engineVolume} · {car.mileage ? `${car.mileage} км` : 'уточнить'}</div>
+        <div className="meta">{car.year} · {car.engineVolume} · {car.mileage ? km(car.mileage) : 'уточнить'}</div>
         <div className="price">{money(car.price)}</div>
         <div className="card-monthly">от {money(monthly)}/мес</div>
         <div className="row">

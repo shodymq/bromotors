@@ -27,6 +27,10 @@ export function money(value: number) {
   return new Intl.NumberFormat('ru-KZ').format(value) + ' ₸';
 }
 
+export function km(value: number) {
+  return new Intl.NumberFormat('ru-KZ').format(value) + ' км';
+}
+
 export function statusLabel(status: Car['status']) {
   return { available: 'В наличии', on_way: 'В пути', reserved: 'Забронировано', sold: 'SOLD' }[status];
 }
