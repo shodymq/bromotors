@@ -24,7 +24,7 @@ export function CarCard({ car, compare = true, credit }: { car: Car; compare?: b
           {car.isDiscount && <span className="badge discount">ВЫГОДНО</span>}
         </div>
         <h3>{car.brand.name} {car.model.name}</h3>
-        <div className="meta">{car.year} · {car.engineVolume} · {car.mileage ? `${car.mileage} км` : 'новый'}</div>
+        <div className="meta">{car.year} · {car.engineVolume} · {car.mileage ? `${car.mileage} км` : 'уточнить'}</div>
         <div className="price">{money(car.price)}</div>
         <div className="card-monthly">от {money(monthly)}/мес</div>
         <div className="row">

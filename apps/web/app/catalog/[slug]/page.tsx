@@ -25,11 +25,15 @@ export default async function CarPage({ params }: { params: Promise<{ slug: stri
 
   const specs = [
     ['Марка', car.brand.name], ['Модель', car.model.name], ['Год', car.year], ['Цена', money(car.price)],
-    ['Пробег', car.mileage ? `${car.mileage} км` : 'уточнить'], ['Двигатель', car.engineVolume],
-    ['Топливо', car.fuelType || 'уточнить'], ['Коробка', car.transmission || 'уточнить'],
-    ['Кузов', car.bodyType || 'уточнить'], ['Привод', car.driveType || 'уточнить'],
-    ['Цвет', car.color || 'уточнить'], ['Статус', statusLabel(car.status)],
-  ];
+    car.mileage ? ['Пробег', `${car.mileage} км`] : null,
+    ['Двигатель', car.engineVolume],
+    car.fuelType ? ['Топливо', car.fuelType] : null,
+    car.transmission ? ['Коробка', car.transmission] : null,
+    car.bodyType ? ['Кузов', car.bodyType] : null,
+    car.driveType ? ['Привод', car.driveType] : null,
+    car.color ? ['Цвет', car.color] : null,
+    ['Статус', statusLabel(car.status)],
+  ].filter(Boolean) as [string, string | number][];
 
   return (
     <>

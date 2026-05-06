@@ -16,9 +16,16 @@ type SeedCar = {
   year: number;
   engineVolume: string;
   price: number;
+  mileage?: number;
+  bodyType?: string;
+  fuelType?: string;
+  transmission?: string;
+  driveType?: string;
+  color?: string;
   description: string;
   status: CarStatus;
   isNewArrival: boolean;
+  isDiscount?: boolean;
   isPublished: boolean;
 };
 
@@ -30,6 +37,12 @@ const cars: SeedCar[] = [
     year: 2013,
     engineVolume: '3.0',
     price: 8_800_000,
+    mileage: 185_000,
+    bodyType: 'Седан',
+    fuelType: 'Бензин',
+    transmission: 'Автомат',
+    driveType: 'Передний',
+    color: 'Серый металлик',
     description:
       'Жайлылық пен статус қатар жүрген бизнес-класс седаны! Hyundai Grandeur — кең салон, жұмсақ жүріс және қуатты қозғалтқышты қалайтындар үшін тамаша таңдау. Келіп көріп, тиімді шарттармен рәсімдеуге болады!',
     status: CarStatus.available,
@@ -43,6 +56,12 @@ const cars: SeedCar[] = [
     year: 2022,
     engineVolume: '2.0',
     price: 11_500_000,
+    mileage: 47_000,
+    bodyType: 'Седан',
+    fuelType: 'Бензин',
+    transmission: 'Автомат',
+    driveType: 'Передний',
+    color: 'Белый перламутр',
     description:
       'Стильді, үнемді әрі жайлы седан. Қалаға да, күнделікті мінуге де тамаша таңдау. Тиімді рәсімдеу және бөліп төлеу мүмкіндігі бар.',
     status: CarStatus.available,
@@ -56,6 +75,12 @@ const cars: SeedCar[] = [
     year: 2022,
     engineVolume: '1.6',
     price: 10_300_000,
+    mileage: 38_000,
+    bodyType: 'Кроссовер',
+    fuelType: 'Бензин',
+    transmission: 'Автомат',
+    driveType: 'Полный',
+    color: 'Синий металлик',
     description:
       'Ықшам, үнемді және жоғары сұраныстағы кроссовер. Қалаға да, күнделікті мінуге де өте ыңғайлы. Тиімді рәсімдеу және бөліп төлеу мүмкіндігі бар.',
     status: CarStatus.available,
@@ -166,33 +191,29 @@ async function seedCars() {
       update: { name: item.model },
       create: { brandId: brand.id, name: item.model, slug: modelSlug },
     });
+    const carFields = {
+      brandId: brand.id,
+      modelId: model.id,
+      title: item.title,
+      year: item.year,
+      price: item.price,
+      engineVolume: item.engineVolume,
+      mileage: item.mileage ?? null,
+      bodyType: item.bodyType ?? null,
+      fuelType: item.fuelType ?? null,
+      transmission: item.transmission ?? null,
+      driveType: item.driveType ?? null,
+      color: item.color ?? null,
+      description: item.description,
+      status: item.status,
+      isNewArrival: item.isNewArrival,
+      isDiscount: item.isDiscount ?? false,
+      isPublished: item.isPublished,
+    };
     const car = await prisma.car.upsert({
       where: { slug: carSlug },
-      update: {
-        brandId: brand.id,
-        modelId: model.id,
-        title: item.title,
-        year: item.year,
-        price: item.price,
-        engineVolume: item.engineVolume,
-        description: item.description,
-        status: item.status,
-        isNewArrival: item.isNewArrival,
-        isPublished: item.isPublished,
-      },
-      create: {
-        brandId: brand.id,
-        modelId: model.id,
-        slug: carSlug,
-        title: item.title,
-        year: item.year,
-        price: item.price,
-        engineVolume: item.engineVolume,
-        description: item.description,
-        status: item.status,
-        isNewArrival: item.isNewArrival,
-        isPublished: item.isPublished,
-      },
+      update: carFields,
+      create: { ...carFields, slug: carSlug },
     });
 
     const images = readImages(item);
