@@ -151,6 +151,7 @@ textarea { padding: 12px; min-height: 110px; resize: vertical; }
 .cover-badge { position: absolute; left: 14px; top: 14px; min-height: 24px; padding: 0 8px; display: inline-flex; align-items: center; border-radius: 8px; background: var(--red); font-size: 12px; font-weight: 700; }
 .photo-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
 .compact-select { min-width: 150px; }
+.lead-message-cell { display: block; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .admin-login { min-height: 100vh; display: grid; place-items: center; padding: 20px; background: radial-gradient(circle at 50% 18%, rgba(255,0,0,.24), transparent 360px), #050505; }
 .login-card { width: min(430px, 100%); display: grid; gap: 14px; padding: 28px; box-shadow: 0 0 70px rgba(255,0,0,.16), 0 24px 80px rgba(0,0,0,.5); }
 .login-card h1 { font-size: 56px; margin: 0; }

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Param, Post, Query, ServiceUnavailableException } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { PrismaService } from './prisma.service';
 import { CarQueryDto, LeadDto, LeadType } from './dto';
@@ -64,6 +64,12 @@ export class PublicController {
   }
 
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @Post('leads')
+  lead(@Body() dto: LeadDto) {
+    return this.createLead(LeadType.question, dto);
+  }
+
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post('leads/trade-in')
   tradeIn(@Body() dto: LeadDto) {
     return this.createLead(LeadType.trade_in, dto);
@@ -82,15 +88,21 @@ export class PublicController {
   }
 
   private async createLead(type: LeadType, dto: LeadDto) {
-    return this.prisma.lead.create({
+    const name = cleanText(dto.name);
+    const phone = cleanText(dto.phone);
+    if (!name || !phone) {
+      throw new BadRequestException('Имя и телефон обязательны');
+    }
+    const lead = await this.prisma.lead.create({
       data: {
         type,
-        carId: dto.carId,
-        name: cleanText(dto.name) || dto.name,
-        phone: dto.phone,
+        carId: cleanText(dto.carId),
+        name,
+        phone,
         message: cleanText(dto.message),
         payload: (dto.payload || undefined) as never,
       },
     });
+    return { ok: true, id: lead.id };
   }
 }

@@ -4,11 +4,17 @@
 
 ## Local setup
 
+Требуется Node.js 22+:
+
+```bash
+nvm use
+```
+
 Быстрее всего поднять локальный PostgreSQL через Docker Compose:
 
 ```bash
 cp .env.example .env
-docker compose up -d
+npm run docker:up
 ```
 
 По умолчанию база доступна на `localhost:5433`. Если Docker недоступен, поднимите PostgreSQL вручную и создайте пользователя и базу под значения из `.env.example`:
@@ -19,9 +25,9 @@ psql -d postgres -c "CREATE DATABASE bromotors OWNER bromotors;"
 ```
 
 ```bash
-npm install
+npm ci
 npm run db:generate
-npm run db:migrate -- --name init
+npm run db:migrate
 npm run db:seed
 npm run dev
 ```
@@ -35,32 +41,32 @@ npm run dev
 Dev login:
 
 ```text
-admin@bromotors.local
+admin@example.com
 ```
 
 Dev password:
 
 ```text
-BroMotors123!
+admin123456
 ```
 
 Dev credentials нужны только для local development. Seed хеширует пароль перед записью в БД. В production задавайте `ADMIN_EMAIL`, `ADMIN_PASSWORD` и сильный `JWT_SECRET` через env.
 
 ## Быстрый setup
 
-После настройки локального PostgreSQL, `cp .env.example .env` и `npm install` можно выполнить:
+После установки Node 22 и настройки `.env` можно выполнить:
 
 ```bash
 npm run setup:local
 ```
 
-Команда делает `prisma generate`, `prisma migrate dev -- --name init` и `prisma db seed`.
+Команда поднимает Docker Compose и выполняет `prisma generate`, `prisma migrate dev` и seed.
 
 ## Seed
 
 Seed создает:
 
-- Admin: `admin@bromotors.local`
+- Admin: `admin@example.com`
 - Brand: Hyundai
 - Models: Grandeur, Sonata, Creta
 - Cars: Hyundai Grandeur, Hyundai Sonata, Hyundai Creta

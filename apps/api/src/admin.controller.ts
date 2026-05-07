@@ -22,7 +22,7 @@ import * as path from 'node:path';
 import * as fs from 'node:fs';
 import sharp = require('sharp');
 import { PrismaService } from './prisma.service';
-import { BrandDto, CarDto, LoginDto, ModelDto, StatusDto } from './dto';
+import { BrandDto, CarDto, LeadUpdateDto, LoginDto, ModelDto, StatusDto } from './dto';
 import { publicCarInclude, slugify, cleanText } from './helpers';
 import { requireJwtSecret } from './auth.guard';
 
@@ -198,8 +198,22 @@ export class AdminController {
     return this.prisma.lead.findUnique({ where: { id }, include: { car: { include: { brand: true, model: true } } } });
   }
 
+  @Patch('leads/:id')
+  updateLead(@Param('id') id: string, @Body() dto: LeadUpdateDto) {
+    const data = {
+      status: dto.status,
+      message: dto.message === undefined ? undefined : (cleanText(dto.message) ?? null),
+      carId: dto.carId === undefined ? undefined : (cleanText(dto.carId) ?? null),
+    };
+    return this.prisma.lead.update({
+      where: { id },
+      data,
+      include: { car: { include: { brand: true, model: true } } },
+    });
+  }
+
   @Patch('leads/:id/status')
-  updateLead(@Param('id') id: string, @Body() dto: StatusDto) {
+  updateLeadStatus(@Param('id') id: string, @Body() dto: StatusDto) {
     return this.prisma.lead.update({ where: { id }, data: { status: dto.status } });
   }
 

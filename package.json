@@ -1,18 +1,27 @@
 {
   "name": "bromotors11",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev -w @bromotors/api\" \"npm run dev -w @bromotors/web\"",
+    "dev:api": "npm run dev -w @bromotors/api",
+    "dev:web": "npm run dev -w @bromotors/web",
+    "dev:web:wasm": "NEXT_TEST_WASM=1 npm run dev -w @bromotors/web",
     "build": "npm run build -w @bromotors/db && npm run build -w @bromotors/api && npm run build -w @bromotors/web",
     "lint": "npm run lint -w @bromotors/api && npm run lint -w @bromotors/web",
-    "setup:local": "npm run db:generate && npm run db:migrate -- --name init && npm run db:seed",
+    "setup:local": "npm run docker:up && npm run db:generate && npm run db:migrate && npm run db:seed",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
     "db:generate": "npm run prisma:generate -w @bromotors/db",
     "db:migrate": "npm run prisma:migrate -w @bromotors/db --",
     "db:seed": "npm run seed -w @bromotors/db",
+    "db:studio": "npm run prisma:studio -w @bromotors/db",
     "smoke:local": "npm run smoke -w @bromotors/db"
   },
   "devDependencies": {
@@ -25,6 +34,8 @@
     "tar": "7.5.10"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.105.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.4"
   }

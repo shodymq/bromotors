@@ -343,16 +343,52 @@ export function ModelsAdmin() {
 
 export function LeadsAdmin() {
   const [items, setItems] = useState<Lead[]>([]);
+  const [cars, setCars] = useState<Car[]>([]);
   const [type, setType] = useState('');
   const [status, setStatusFilter] = useState('');
   const [selected, setSelected] = useState<Lead | null>(null);
+  const [detailMessage, setDetailMessage] = useState('');
+  const [detailCarId, setDetailCarId] = useState('');
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const load = () => api('/admin/leads').then(setItems).catch((err) => { if (isUnauthorized(err)) { redirectToLogin(); } else { setError('Не удалось загрузить лиды.'); } });
+  const load = () => Promise.all([api('/admin/leads'), api('/admin/cars')])
+    .then(([leadData, carData]) => { setItems(leadData); setCars(carData); })
+    .catch((err) => { if (isUnauthorized(err)) { redirectToLogin(); } else { setError('Не удалось загрузить заявки.'); } });
   useEffect(() => { void load(); }, []);
   const filtered = items.filter((lead) => (!type || lead.type === type) && (!status || lead.status === status));
   async function setStatus(id: string, next: string) {
-    await api(`/admin/leads/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status: next }) }).catch((err) => setError(err.message));
+    await api(`/admin/leads/${id}`, { method: 'PATCH', body: JSON.stringify({ status: next }) }).catch((err) => setError(err.message));
     load();
+  }
+  async function openDetails(lead: Lead) {
+    setError('');
+    try {
+      const fresh = await api(`/admin/leads/${lead.id}`);
+      setSelected(fresh);
+      setDetailMessage(fresh.message || '');
+      setDetailCarId(fresh.car?.id || '');
+    } catch (err) {
+      if (isUnauthorized(err)) redirectToLogin();
+      else setError('Не удалось открыть заявку.');
+    }
+  }
+  async function saveDetails() {
+    if (!selected) return;
+    setSaving(true);
+    setError('');
+    try {
+      const updated = await api(`/admin/leads/${selected.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ message: detailMessage, carId: detailCarId }),
+      });
+      setSelected(updated);
+      await load();
+    } catch (err) {
+      if (isUnauthorized(err)) redirectToLogin();
+      else setError(err instanceof Error ? err.message : 'Не удалось сохранить заявку.');
+    } finally {
+      setSaving(false);
+    }
   }
   async function deleteLead(lead: Lead) {
     if (!confirm(`Удалить заявку от ${lead.name}?`)) return;
@@ -375,17 +411,18 @@ export function LeadsAdmin() {
           <select className="select" value={status} onChange={(e) => setStatusFilter(e.target.value)}><option value="">Все статусы</option>{statusOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select>
         </div>
         <table className="table admin-table">
-          <thead><tr><th>Дата</th><th>Тип</th><th>Клиент</th><th>Авто</th><th>Статус</th><th></th></tr></thead>
+          <thead><tr><th>Дата</th><th>Имя</th><th>Телефон</th><th>Авто</th><th>Статус</th><th>Сообщение</th><th>Действия</th></tr></thead>
           <tbody>{filtered.map((lead) => (
             <tr key={lead.id}>
-              <td>{new Date(lead.createdAt).toLocaleString('ru-KZ')}</td>
-              <td>{leadType(lead.type)}</td>
-              <td><strong>{lead.name}</strong><p className="meta">{lead.phone}</p></td>
+              <td>{new Date(lead.createdAt).toLocaleString('ru-KZ')}<p className="meta">{leadType(lead.type)}</p></td>
+              <td><strong>{lead.name}</strong></td>
+              <td>{lead.phone}</td>
               <td>{lead.car ? `${lead.car.brand.name} ${lead.car.model.name}` : '—'}</td>
               <td><select className="select compact-select" value={lead.status} onChange={(e) => setStatus(lead.id, e.target.value)}>{statusOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></td>
+              <td>{lead.message ? <span className="lead-message-cell">{lead.message}</span> : <span className="meta">Нет</span>}</td>
               <td className="admin-actions">
                 <a className="btn compact primary" href={`https://wa.me/${lead.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>
-                <button className="btn compact" onClick={() => setSelected(lead)}>Детали</button>
+                <button className="btn compact" onClick={() => openDetails(lead)}>Детали</button>
                 <button className="btn compact ghost" onClick={() => deleteLead(lead)}>Удалить</button>
               </td>
             </tr>
@@ -405,7 +442,13 @@ export function LeadsAdmin() {
               <div className="spec"><span>Авто</span><strong>{selected.car ? `${selected.car.brand.name} ${selected.car.model.name}` : 'Без авто'}</strong></div>
             </div>
             <h3>Сообщение</h3>
-            <p>{selected.message || 'Нет сообщения'}</p>
+            <textarea className="field" value={detailMessage} onChange={(event) => setDetailMessage(event.target.value)} rows={5} placeholder="Комментарий клиента или заметка менеджера" />
+            <h3>Авто</h3>
+            <select className="select" value={detailCarId} onChange={(event) => setDetailCarId(event.target.value)}>
+              <option value="">Без авто</option>
+              {cars.map((car) => <option key={car.id} value={car.id}>{car.brand.name} {car.model.name} {car.year}</option>)}
+            </select>
+            <button className="btn primary" onClick={saveDetails} disabled={saving} style={{ marginTop: 12 }}>{saving ? 'Сохранение...' : 'Сохранить'}</button>
             {!!selected.payload && Object.keys(selected.payload as Record<string, unknown>).length > 0 && <><h3>Payload</h3><pre className="payload">{JSON.stringify(selected.payload, null, 2)}</pre></>}
           </aside>
         </div>

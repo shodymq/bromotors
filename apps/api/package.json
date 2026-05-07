@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node ./node_modules/@nestjs/cli/bin/nest.js start --watch",
-    "build": "node ./node_modules/@nestjs/cli/bin/nest.js build",
+    "dev": "nest start --watch",
+    "build": "nest build",
     "lint": "tsc --noEmit",
     "start": "node dist/main.js"
   },

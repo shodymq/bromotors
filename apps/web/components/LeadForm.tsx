@@ -15,11 +15,12 @@ export function LeadForm({ car, compact }: Props) {
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const form = e.currentTarget;
     setLoading(true);
     setError('');
-    const data = Object.fromEntries(new FormData(e.currentTarget));
+    const data = Object.fromEntries(new FormData(form));
     try {
-      const res = await fetch(`${API}/leads/question`, {
+      const res = await fetch(`${API}/leads`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -30,6 +31,7 @@ export function LeadForm({ car, compact }: Props) {
         }),
       });
       if (!res.ok) throw new Error('Ошибка отправки');
+      form.reset();
       setOk(true);
     } catch {
       setError('Ошибка. Попробуйте ещё раз или напишите в WhatsApp.');
@@ -42,8 +44,8 @@ export function LeadForm({ car, compact }: Props) {
     return (
       <div className="lead-success">
         <div className="lead-success-icon">✓</div>
-        <h3>Заявка принята!</h3>
-        <p className="meta">Менеджер свяжется с вами в ближайшее время.</p>
+        <h3>Заявка отправлена</h3>
+        <p className="meta">Заявка отправлена, менеджер скоро свяжется с вами.</p>
         <a
           className="btn primary"
           href={car ? carWhatsapp(car) : `${wa}?text=${encodeURIComponent('Здравствуйте! Хочу узнать подробнее.')}`}
@@ -91,7 +93,7 @@ export function LeadForm({ car, compact }: Props) {
       />
       {error && <p className="form-error">{error}</p>}
       <button className="btn primary" disabled={loading} style={{ marginTop: 12, width: '100%' }}>
-        {loading ? 'Отправка...' : 'Отправить заявку'}
+        {loading ? 'Отправка...' : 'Оставить заявку'}
       </button>
     </form>
   );

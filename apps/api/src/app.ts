@@ -10,7 +10,7 @@ export function assertProductionEnv() {
   if (missing.length) {
     throw new Error(`Missing required production env: ${missing.join(', ')}`);
   }
-  if (process.env.ADMIN_PASSWORD === 'BroMotors123!') {
+  if (process.env.ADMIN_PASSWORD === 'admin123456' || process.env.ADMIN_PASSWORD === 'BroMotors123!') {
     throw new Error('Production ADMIN_PASSWORD must not use the local dev default');
   }
 }
