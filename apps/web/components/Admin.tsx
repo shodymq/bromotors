@@ -10,9 +10,25 @@ type Lead = { id: string; type: 'question' | 'trade_in' | 'credit'; name: string
 type CountedBrand = Brand & { _count?: { cars: number; models: number } };
 type CountedModel = Model & { _count?: { cars: number } };
 
+class ApiError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
+  }
+}
+
+function apiErrorMessage(status: number, body: string) {
+  try {
+    const data = JSON.parse(body) as { message?: string | string[]; error?: string };
+    if (Array.isArray(data.message)) return data.message.join(', ');
+    return data.message || data.error || body;
+  } catch {
+    return body;
+  }
+}
+
 async function api(path: string, init: RequestInit = {}) {
   const res = await fetch(`${API}${path}`, { credentials: 'include', ...init, headers: { 'Content-Type': 'application/json', ...(init.headers || {}) } });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) throw new ApiError(res.status, apiErrorMessage(res.status, await res.text()));
   return res.json();
 }
 
@@ -90,15 +106,21 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 export function LoginForm() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    api('/admin/me').then(() => { location.href = '/admin'; }).catch(() => null);
+  }, []);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setError('');
     try {
-      await api('/admin/auth/login', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(event.currentTarget))) });
+      await api('/admin/login', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(event.currentTarget))) });
       location.href = '/admin';
-    } catch {
-      setError('Неверный логин или пароль');
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) setError('Неверный email или пароль');
+      else if (err instanceof ApiError && err.status >= 500) setError('Ошибка сервера при входе');
+      else if (err instanceof ApiError && err.message) setError(err.message);
+      else setError('API недоступен');
       setLoading(false);
     }
   }
@@ -108,7 +130,7 @@ export function LoginForm() {
         <div className="login-logo">BRO MOTORS</div>
         <p className="eyebrow">Ночной шоурум</p>
         <h1>Admin</h1>
-        <input className="field" name="email" type="email" placeholder="admin@bromotors.local" required />
+        <input className="field" name="email" type="email" placeholder="admin@example.com" required />
         <input className="field" name="password" type="password" placeholder="Password" required />
         {error && <p className="form-error">{error}</p>}
         <button className="btn primary" disabled={loading}>{loading ? 'Вход...' : 'Войти'}</button>

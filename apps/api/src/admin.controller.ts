@@ -11,6 +11,7 @@ import {
   Res,
   UploadedFiles,
   UseInterceptors,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
@@ -33,11 +34,12 @@ export class AdminController {
   constructor(private readonly prisma: PrismaService, private readonly jwt: JwtService) {}
 
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
-  @Post('auth/login')
+  @Post(['login', 'auth/login'])
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) response: Response) {
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const email = dto.email.trim().toLowerCase();
+    const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) {
-      throw new BadRequestException('Неверный логин или пароль');
+      throw new UnauthorizedException('Неверный email или пароль');
     }
     const token = await this.jwt.signAsync({ sub: user.id, email: user.email, role: user.role }, {
       secret: requireJwtSecret(),
@@ -47,6 +49,7 @@ export class AdminController {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
+      path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
     return { id: user.id, email: user.email, role: user.role };
@@ -54,7 +57,7 @@ export class AdminController {
 
   @Post('auth/logout')
   logout(@Res({ passthrough: true }) response: Response) {
-    response.clearCookie('admin_token');
+    response.clearCookie('admin_token', { path: '/' });
     return { ok: true };
   }
 

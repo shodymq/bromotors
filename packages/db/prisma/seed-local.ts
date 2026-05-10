@@ -6,8 +6,8 @@ import path from 'node:path';
 const prisma = new PrismaClient();
 const root = path.resolve(__dirname, '../../..');
 const uploadRoot = path.resolve(root, 'apps/web/public/uploads/cars');
-const devAdminEmail = 'admin@bromotors.local';
-const devAdminPassword = 'BroMotors123!';
+const devAdminEmail = 'admin@example.com';
+const devAdminPassword = 'Br0Motors!2026_Admin#KZ';
 
 type SeedCar = {
   brand: string;
@@ -150,11 +150,11 @@ function readImages(car: SeedCar) {
 
 async function seedAdmin() {
   const isProduction = process.env.NODE_ENV === 'production';
-  const email = process.env.ADMIN_EMAIL || (!isProduction ? devAdminEmail : undefined);
-  const password = process.env.ADMIN_PASSWORD || (!isProduction ? devAdminPassword : undefined);
+  const email = (process.env.SEED_ADMIN_EMAIL || process.env.ADMIN_EMAIL || (!isProduction ? devAdminEmail : undefined))?.trim().toLowerCase();
+  const password = process.env.SEED_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || (!isProduction ? devAdminPassword : undefined);
 
   if (!email || !password || !process.env.JWT_SECRET) {
-    throw new Error('ADMIN_EMAIL, ADMIN_PASSWORD and JWT_SECRET are required for seed.');
+    throw new Error('SEED_ADMIN_EMAIL/ADMIN_EMAIL, SEED_ADMIN_PASSWORD/ADMIN_PASSWORD and JWT_SECRET are required for seed.');
   }
   if (isProduction && password === devAdminPassword) {
     throw new Error('Production seed must not use the local dev admin password.');

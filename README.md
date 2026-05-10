@@ -35,16 +35,16 @@ npm run dev
 Dev login:
 
 ```text
-admin@bromotors.local
+admin@example.com
 ```
 
 Dev password:
 
 ```text
-BroMotors123!
+Br0Motors!2026_Admin#KZ
 ```
 
-Dev credentials нужны только для local development. Seed хеширует пароль перед записью в БД. В production задавайте `ADMIN_EMAIL`, `ADMIN_PASSWORD` и сильный `JWT_SECRET` через env.
+Dev credentials нужны только для local development. Seed хеширует пароль перед записью в БД. Для local seed задавайте `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` и сильный `JWT_SECRET` через env.
 
 ## Быстрый setup
 
@@ -60,7 +60,7 @@ npm run setup:local
 
 Seed создает:
 
-- Admin: `admin@bromotors.local`
+- Admin: `admin@example.com`
 - Brand: Hyundai
 - Models: Grandeur, Sonata, Creta
 - Cars: Hyundai Grandeur, Hyundai Sonata, Hyundai Creta

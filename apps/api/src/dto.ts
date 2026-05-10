@@ -32,6 +32,7 @@ export class CarQueryDto {
 }
 
 export class LoginDto {
+  @Transform(({ value }) => typeof value === 'string' ? value.trim().toLowerCase() : value)
   @IsEmail() email!: string;
   @IsString() @Length(8, 160) password!: string;
 }

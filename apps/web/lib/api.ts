@@ -3,7 +3,7 @@ import { demoBrands, demoCars, demoModels, getDemoCar } from './demo-cars';
 
 const configuredApi = process.env.NEXT_PUBLIC_API_URL;
 const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
-export const API = configuredApi || (isDemoMode || process.env.NODE_ENV === 'production' ? '' : 'http://127.0.0.1:4000/api');
+export const API = configuredApi || (isDemoMode || process.env.NODE_ENV === 'production' ? '' : 'http://localhost:4000/api');
 export const phone = '8 775 666 99 88';
 export const wa = 'https://wa.me/77756669988';
 export const address = 'Астана даңғылы 30, Қызылорда';
