@@ -26,8 +26,10 @@ enum LeadType {
 
 enum LeadStatus {
   new
+  contacted
   in_progress
   closed
+  lost
 }
 
 model User {

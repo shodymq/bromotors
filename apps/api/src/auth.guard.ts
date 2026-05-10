@@ -14,15 +14,19 @@ export class AuthGuard implements CanActivate {
     if (handler[IS_PUBLIC] || controller[IS_PUBLIC]) return true;
     const request = context.switchToHttp().getRequest<Request>();
     if (!request.path.includes('/admin')) return true;
+    if (request.path.endsWith('/admin/login')) return true;
     if (request.path.endsWith('/admin/auth/login')) return true;
     const token = request.cookies?.admin_token || request.headers.authorization?.replace(/^Bearer\s+/i, '');
     if (!token) throw new UnauthorizedException('Auth required');
     try {
-      (request as Request & { user?: unknown }).user = await this.jwt.verifyAsync(token, {
+      const payload = await this.jwt.verifyAsync<{ role?: string }>(token, {
         secret: requireJwtSecret(),
       });
+      if (payload.role !== 'admin') throw new UnauthorizedException('Admin role required');
+      (request as Request & { user?: unknown }).user = payload;
       return true;
-    } catch {
+    } catch (error) {
+      if (error instanceof UnauthorizedException) throw error;
       throw new UnauthorizedException('Invalid session');
     }
   }

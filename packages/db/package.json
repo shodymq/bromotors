@@ -8,6 +8,7 @@
     "build": "dotenv -e ../../.env -- prisma generate",
     "prisma:generate": "dotenv -e ../../.env -- prisma generate",
     "prisma:migrate": "dotenv -e ../../.env -- prisma migrate dev",
+    "prisma:studio": "dotenv -e ../../.env -- prisma studio",
     "seed": "dotenv -e ../../.env -- tsx prisma/seed-local.ts",
     "smoke": "dotenv -e ../../.env -- tsx prisma/smoke-local.ts"
   },

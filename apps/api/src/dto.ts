@@ -6,7 +6,6 @@ import {
   IsInt,
   IsJSON,
   IsOptional,
-  IsPhoneNumber,
   IsString,
   Length,
   Max,
@@ -32,6 +31,7 @@ export class CarQueryDto {
 }
 
 export class LoginDto {
+  @Transform(({ value }) => typeof value === 'string' ? value.trim().toLowerCase() : value)
   @IsEmail() email!: string;
   @IsString() @Length(8, 160) password!: string;
 }
@@ -73,14 +73,20 @@ export class CreditSettingDto {
 
 export class LeadDto {
   @IsOptional() @IsString() carId?: string;
-  @IsString() @Length(2, 80) name!: string;
-  @IsPhoneNumber('KZ') phone!: string;
+  @IsString() @Length(1, 80) name!: string;
+  @IsString() @Length(1, 40) phone!: string;
   @IsOptional() @IsString() @Length(0, 1200) message?: string;
   @IsOptional() payload?: Record<string, unknown>;
 }
 
 export class StatusDto {
   @IsEnum(LeadStatus) status!: LeadStatus;
+}
+
+export class LeadUpdateDto {
+  @IsOptional() @IsEnum(LeadStatus) status?: LeadStatus;
+  @IsOptional() @IsString() @Length(0, 1200) message?: string;
+  @IsOptional() @IsString() carId?: string;
 }
 
 export class ReorderDto {

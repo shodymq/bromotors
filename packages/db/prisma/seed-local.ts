@@ -1,4 +1,4 @@
-import { PrismaClient, CarStatus } from '@prisma/client';
+import { PrismaClient, CarStatus, LeadType, LeadStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -6,8 +6,8 @@ import path from 'node:path';
 const prisma = new PrismaClient();
 const root = path.resolve(__dirname, '../../..');
 const uploadRoot = path.resolve(root, 'apps/web/public/uploads/cars');
-const devAdminEmail = 'admin@bromotors.local';
-const devAdminPassword = 'BroMotors123!';
+const devAdminEmail = 'admin@example.com';
+const devAdminPassword = 'Br0Motors!2026_Admin#KZ';
 
 type SeedCar = {
   brand: string;
@@ -150,13 +150,13 @@ function readImages(car: SeedCar) {
 
 async function seedAdmin() {
   const isProduction = process.env.NODE_ENV === 'production';
-  const email = process.env.ADMIN_EMAIL || (!isProduction ? devAdminEmail : undefined);
-  const password = process.env.ADMIN_PASSWORD || (!isProduction ? devAdminPassword : undefined);
+  const email = (process.env.SEED_ADMIN_EMAIL || process.env.ADMIN_EMAIL || (!isProduction ? devAdminEmail : undefined))?.trim().toLowerCase();
+  const password = process.env.SEED_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || (!isProduction ? devAdminPassword : undefined);
 
   if (!email || !password || !process.env.JWT_SECRET) {
-    throw new Error('ADMIN_EMAIL, ADMIN_PASSWORD and JWT_SECRET are required for seed.');
+    throw new Error('SEED_ADMIN_EMAIL/ADMIN_EMAIL, SEED_ADMIN_PASSWORD/ADMIN_PASSWORD and JWT_SECRET are required for seed.');
   }
-  if (isProduction && password === devAdminPassword) {
+  if (isProduction && (password === devAdminPassword || password === 'BroMotors123!')) {
     throw new Error('Production seed must not use the local dev admin password.');
   }
   if (password.length < 10) {
@@ -262,9 +262,28 @@ function copyLogo() {
   fs.copyFileSync(path.join(logoDir, logo), path.join(publicLogoDir, `bro-motors${path.extname(logo).toLowerCase()}`));
 }
 
+async function seedLeads() {
+  const existing = await prisma.lead.count();
+  if (existing > 0) return { leadsCreated: 0 };
+
+  const firstCar = await prisma.car.findFirst({ select: { id: true } });
+
+  const testLeads = [
+    { type: LeadType.question, name: 'Алмас Бекеев', phone: '+77771234567', message: 'Хочу узнать про условия покупки', status: LeadStatus.new, carId: firstCar?.id },
+    { type: LeadType.trade_in, name: 'Динара Сейтова', phone: '+77059876543', message: 'Хочу сдать Toyota Camry 2018 года', status: LeadStatus.contacted, carId: null },
+    { type: LeadType.credit, name: 'Ерлан Жаксыбеков', phone: '+77012345678', message: 'Интересует рассрочка на 24 месяца', status: LeadStatus.in_progress, carId: firstCar?.id },
+    { type: LeadType.question, name: 'Гульнара Нурова', phone: '+77771112233', message: null, status: LeadStatus.closed, carId: null },
+    { type: LeadType.question, name: 'Берик Ахметов', phone: '+77779998877', message: 'Хочу посмотреть авто в выходные', status: LeadStatus.lost, carId: null },
+  ];
+
+  await prisma.lead.createMany({ data: testLeads.map((lead) => ({ ...lead, carId: lead.carId ?? undefined })) });
+  return { leadsCreated: testLeads.length };
+}
+
 async function main() {
   const adminEmail = await seedAdmin();
   const result = await seedCars();
+  const leadResult = await seedLeads();
   copyLogo();
 
   console.log('Seed completed:');
@@ -272,6 +291,7 @@ async function main() {
   console.log(`- Cars created: ${result.carsCreated}`);
   console.log(`- Images copied: ${result.imagesCopied}`);
   console.log(`- Cover images: ${result.coverImages}/${result.carsCreated}`);
+  console.log(`- Leads seeded: ${leadResult.leadsCreated}`);
 }
 
 main()

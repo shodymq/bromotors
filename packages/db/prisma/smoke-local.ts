@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 const apiBase = process.env.SMOKE_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 const expectedCars = ['Hyundai Grandeur', 'Hyundai Sonata', 'Hyundai Creta'];
-const adminEmail = process.env.ADMIN_EMAIL || 'admin@bromotors.local';
+const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
 
 async function fetchJson<T>(url: string): Promise<T> {
   const response = await fetch(url);
