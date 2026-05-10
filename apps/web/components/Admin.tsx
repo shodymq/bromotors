@@ -6,12 +6,12 @@ import { API, money, statusLabel } from '../lib/api';
 import { Brand, Car, Model } from '../lib/types';
 
 type AdminUser = { email: string };
-type Lead = { id: string; type: 'question' | 'trade_in' | 'credit'; name: string; phone: string; message?: string | null; payload?: unknown; status: 'new' | 'in_progress' | 'closed'; createdAt: string; car?: Car | null };
+type Lead = { id: string; type: 'question' | 'trade_in' | 'credit'; name: string; phone: string; message?: string | null; payload?: unknown; status: 'new' | 'contacted' | 'in_progress' | 'closed' | 'lost'; createdAt: string; car?: Car | null };
 type CountedBrand = Brand & { _count?: { cars: number; models: number } };
 type CountedModel = Model & { _count?: { cars: number } };
 
-class ApiError extends Error {
-  constructor(readonly status: number, message: string) {
+class AdminApiError extends Error {
+  constructor(public status: number, message: string) {
     super(message);
   }
 }
@@ -28,8 +28,17 @@ function apiErrorMessage(status: number, body: string) {
 
 async function api(path: string, init: RequestInit = {}) {
   const res = await fetch(`${API}${path}`, { credentials: 'include', ...init, headers: { 'Content-Type': 'application/json', ...(init.headers || {}) } });
-  if (!res.ok) throw new ApiError(res.status, apiErrorMessage(res.status, await res.text()));
+  if (!res.ok) throw new AdminApiError(res.status, apiErrorMessage(res.status, await res.text()));
   return res.json();
+}
+
+function isUnauthorized(error: unknown) {
+  return error instanceof AdminApiError && error.status === 401;
+}
+
+function redirectToLogin() {
+  const next = `${location.pathname}${location.search}`;
+  location.replace(`/admin/login?next=${encodeURIComponent(next)}`);
 }
 
 function leadType(type: Lead['type']) {
@@ -37,7 +46,8 @@ function leadType(type: Lead['type']) {
 }
 
 function leadStatus(status: Lead['status']) {
-  return { new: 'Новый', in_progress: 'В работе', closed: 'Закрыт' }[status];
+  const labels: Record<Lead['status'], string> = { new: 'Новый', contacted: 'Связались', in_progress: 'В работе', closed: 'Закрыт', lost: 'Потерян' };
+  return labels[status] ?? status;
 }
 
 function asCarDto(car: Car, patch: Partial<Car> = {}) {
@@ -87,7 +97,27 @@ function AdminTopbar({ user }: { user: AdminUser | null }) {
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [user, setUser] = useState<AdminUser | null>(null);
-  useEffect(() => { api('/admin/me').then(setUser).catch(() => location.href = '/admin/login'); }, []);
+  const [authState, setAuthState] = useState<'checking' | 'ready' | 'error'>('checking');
+  const [authError, setAuthError] = useState('');
+  useEffect(() => {
+    let active = true;
+    api('/admin/me')
+      .then((data) => {
+        if (!active) return;
+        setUser(data);
+        setAuthState('ready');
+      })
+      .catch((error) => {
+        if (!active) return;
+        if (isUnauthorized(error)) {
+          redirectToLogin();
+          return;
+        }
+        setAuthError('Не удалось проверить сессию администратора. Проверьте API и базу данных.');
+        setAuthState('error');
+      });
+    return () => { active = false; };
+  }, []);
   const links = [['Dashboard', '/admin'], ['Cars', '/admin/cars'], ['Brands', '/admin/brands'], ['Models', '/admin/models'], ['Leads', '/admin/leads'], ['Кредит', '/admin/credit']];
   return (
     <div className="admin-shell">
@@ -98,7 +128,14 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           <button onClick={() => api('/admin/auth/logout', { method: 'POST' }).finally(() => location.href = '/admin/login')}>Logout</button>
         </nav>
       </aside>
-      <main className="admin-main"><AdminTopbar user={user} /><div className="admin-content">{children}</div></main>
+      <main className="admin-main">
+        <AdminTopbar user={user} />
+        <div className="admin-content">
+          {authState === 'checking' && <div className="admin-skeleton" />}
+          {authState === 'error' && <div className="empty-state">{authError}</div>}
+          {authState === 'ready' && children}
+        </div>
+      </main>
     </div>
   );
 }
@@ -107,7 +144,14 @@ export function LoginForm() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   useEffect(() => {
-    api('/admin/me').then(() => { location.href = '/admin'; }).catch(() => null);
+    api('/admin/me')
+      .then(() => {
+        const next = new URLSearchParams(location.search).get('next') || '/admin';
+        location.replace(next.startsWith('/admin/login') ? '/admin' : next);
+      })
+      .catch((err) => {
+        if (!isUnauthorized(err)) setError('Не удалось проверить API. Проверьте, что сервер и база данных запущены.');
+      });
   }, []);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -115,11 +159,12 @@ export function LoginForm() {
     setError('');
     try {
       await api('/admin/login', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(event.currentTarget))) });
-      location.href = '/admin';
+      const next = new URLSearchParams(location.search).get('next') || '/admin';
+      location.href = next.startsWith('/admin/login') ? '/admin' : next;
     } catch (err) {
-      if (err instanceof ApiError && err.status === 401) setError('Неверный email или пароль');
-      else if (err instanceof ApiError && err.status >= 500) setError('Ошибка сервера при входе');
-      else if (err instanceof ApiError && err.message) setError(err.message);
+      if (err instanceof AdminApiError && err.status === 401) setError('Неверный email или пароль');
+      else if (err instanceof AdminApiError && err.status >= 500) setError('Ошибка сервера при входе');
+      else if (err instanceof AdminApiError && err.message) setError(err.message);
       else setError('API недоступен');
       setLoading(false);
     }
@@ -454,18 +499,116 @@ export function ModelsAdmin() {
 
 export function LeadsAdmin() {
   const [items, setItems] = useState<Lead[]>([]);
+  const [cars, setCars] = useState<Car[]>([]);
   const [type, setType] = useState('');
   const [status, setStatusFilter] = useState('');
   const [selected, setSelected] = useState<Lead | null>(null);
-  const load = () => api('/admin/leads').then(setItems).catch(() => location.href = '/admin/login');
+  const [detailMessage, setDetailMessage] = useState('');
+  const [detailCarId, setDetailCarId] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const load = () => Promise.all([api('/admin/leads'), api('/admin/cars')])
+    .then(([leadData, carData]) => { setItems(leadData); setCars(carData); })
+    .catch((err) => { if (isUnauthorized(err)) { redirectToLogin(); } else { setError('Не удалось загрузить заявки.'); } });
   useEffect(() => { void load(); }, []);
   const filtered = items.filter((lead) => (!type || lead.type === type) && (!status || lead.status === status));
-  async function setStatus(id: string, next: string) { await api(`/admin/leads/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status: next }) }); load(); }
+  async function setStatus(id: string, next: string) {
+    await api(`/admin/leads/${id}`, { method: 'PATCH', body: JSON.stringify({ status: next }) }).catch((err) => setError(err.message));
+    load();
+  }
+  async function openDetails(lead: Lead) {
+    setError('');
+    try {
+      const fresh = await api(`/admin/leads/${lead.id}`);
+      setSelected(fresh);
+      setDetailMessage(fresh.message || '');
+      setDetailCarId(fresh.car?.id || '');
+    } catch (err) {
+      if (isUnauthorized(err)) redirectToLogin();
+      else setError('Не удалось открыть заявку.');
+    }
+  }
+  async function saveDetails() {
+    if (!selected) return;
+    setSaving(true);
+    setError('');
+    try {
+      const updated = await api(`/admin/leads/${selected.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ message: detailMessage, carId: detailCarId }),
+      });
+      setSelected(updated);
+      await load();
+    } catch (err) {
+      if (isUnauthorized(err)) redirectToLogin();
+      else setError(err instanceof Error ? err.message : 'Не удалось сохранить заявку.');
+    } finally {
+      setSaving(false);
+    }
+  }
+  async function deleteLead(lead: Lead) {
+    if (!confirm(`Удалить заявку от ${lead.name}?`)) return;
+    await api(`/admin/leads/${lead.id}`, { method: 'DELETE' }).then(load).catch((err) => setError(err.message));
+  }
+  const statusOptions: { value: Lead['status']; label: string }[] = [
+    { value: 'new', label: 'Новый' },
+    { value: 'contacted', label: 'Связались' },
+    { value: 'in_progress', label: 'В работе' },
+    { value: 'closed', label: 'Закрыт' },
+    { value: 'lost', label: 'Потерян' },
+  ];
   return (
     <AdminLayout>
-      <div className="admin-page-head"><div><p className="eyebrow">Leads</p><h1>Лиды</h1></div></div>
-      <div className="admin-panel"><div className="admin-tools"><select className="select" value={type} onChange={(e) => setType(e.target.value)}><option value="">Все типы</option><option value="question">Заявка</option><option value="trade_in">Trade-in</option><option value="credit">Кредит</option></select><select className="select" value={status} onChange={(e) => setStatusFilter(e.target.value)}><option value="">Все статусы</option><option value="new">new</option><option value="in_progress">in_progress</option><option value="closed">closed</option></select></div><table className="table admin-table"><thead><tr><th>Дата</th><th>Тип</th><th>Клиент</th><th>Авто</th><th>Статус</th><th></th></tr></thead><tbody>{filtered.map((lead) => <tr key={lead.id}><td>{new Date(lead.createdAt).toLocaleString('ru-KZ')}</td><td>{leadType(lead.type)}</td><td><strong>{lead.name}</strong><p className="meta">{lead.phone}</p></td><td>{lead.car ? `${lead.car.brand.name} ${lead.car.model.name}` : 'Без авто'}</td><td><select className="select compact-select" value={lead.status} onChange={(e) => setStatus(lead.id, e.target.value)}><option value="new">new</option><option value="in_progress">in_progress</option><option value="closed">closed</option></select></td><td className="admin-actions"><a className="btn compact primary" href={`https://wa.me/${lead.phone.replace(/\D/g, '')}`}>WhatsApp</a><button className="btn compact" onClick={() => setSelected(lead)}>Details</button></td></tr>)}</tbody></table>{!filtered.length && <EmptyState text="Лиды не найдены" />}</div>
-      {selected && <div className="drawer-backdrop" onClick={() => setSelected(null)}><aside className="lead-drawer" onClick={(event) => event.stopPropagation()}><button className="btn ghost compact" onClick={() => setSelected(null)}>Close</button><h2>{selected.name}</h2><p className="meta">{leadType(selected.type)} · {new Date(selected.createdAt).toLocaleString('ru-KZ')}</p><div className="specs"><div className="spec"><span>Телефон</span><strong>{selected.phone}</strong></div><div className="spec"><span>Статус</span><strong>{leadStatus(selected.status)}</strong></div><div className="spec"><span>Авто</span><strong>{selected.car ? `${selected.car.brand.name} ${selected.car.model.name}` : 'Без авто'}</strong></div></div><h3>Сообщение</h3><p>{selected.message || 'Нет сообщения'}</p><h3>Payload</h3><pre className="payload">{JSON.stringify(selected.payload || {}, null, 2)}</pre></aside></div>}
+      <div className="admin-page-head"><div><p className="eyebrow">Leads</p><h1>Заявки</h1></div></div>
+      {error && <p className="form-error">{error}</p>}
+      <div className="admin-panel">
+        <div className="admin-tools">
+          <select className="select" value={type} onChange={(e) => setType(e.target.value)}><option value="">Все типы</option><option value="question">Заявка</option><option value="trade_in">Trade-in</option><option value="credit">Кредит</option></select>
+          <select className="select" value={status} onChange={(e) => setStatusFilter(e.target.value)}><option value="">Все статусы</option>{statusOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select>
+        </div>
+        <table className="table admin-table">
+          <thead><tr><th>Дата</th><th>Имя</th><th>Телефон</th><th>Авто</th><th>Статус</th><th>Сообщение</th><th>Действия</th></tr></thead>
+          <tbody>{filtered.map((lead) => (
+            <tr key={lead.id}>
+              <td>{new Date(lead.createdAt).toLocaleString('ru-KZ')}<p className="meta">{leadType(lead.type)}</p></td>
+              <td><strong>{lead.name}</strong></td>
+              <td>{lead.phone}</td>
+              <td>{lead.car ? `${lead.car.brand.name} ${lead.car.model.name}` : '—'}</td>
+              <td><select className="select compact-select" value={lead.status} onChange={(e) => setStatus(lead.id, e.target.value)}>{statusOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></td>
+              <td>{lead.message ? <span className="lead-message-cell">{lead.message}</span> : <span className="meta">Нет</span>}</td>
+              <td className="admin-actions">
+                <a className="btn compact primary" href={`https://wa.me/${lead.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>
+                <button className="btn compact" onClick={() => openDetails(lead)}>Детали</button>
+                <button className="btn compact ghost" onClick={() => deleteLead(lead)}>Удалить</button>
+              </td>
+            </tr>
+          ))}</tbody>
+        </table>
+        {!filtered.length && <EmptyState text="Заявки не найдены" />}
+      </div>
+      {selected && (
+        <div className="drawer-backdrop" onClick={() => setSelected(null)}>
+          <aside className="lead-drawer" onClick={(event) => event.stopPropagation()}>
+            <button className="btn ghost compact" onClick={() => setSelected(null)}>Закрыть</button>
+            <h2>{selected.name}</h2>
+            <p className="meta">{leadType(selected.type)} · {new Date(selected.createdAt).toLocaleString('ru-KZ')}</p>
+            <div className="specs">
+              <div className="spec"><span>Телефон</span><strong>{selected.phone}</strong></div>
+              <div className="spec"><span>Статус</span><strong>{leadStatus(selected.status)}</strong></div>
+              <div className="spec"><span>Авто</span><strong>{selected.car ? `${selected.car.brand.name} ${selected.car.model.name}` : 'Без авто'}</strong></div>
+            </div>
+            <h3>Сообщение</h3>
+            <textarea className="field" value={detailMessage} onChange={(event) => setDetailMessage(event.target.value)} rows={5} placeholder="Комментарий клиента или заметка менеджера" />
+            <h3>Авто</h3>
+            <select className="select" value={detailCarId} onChange={(event) => setDetailCarId(event.target.value)}>
+              <option value="">Без авто</option>
+              {cars.map((car) => <option key={car.id} value={car.id}>{car.brand.name} {car.model.name} {car.year}</option>)}
+            </select>
+            <button className="btn primary" onClick={saveDetails} disabled={saving} style={{ marginTop: 12 }}>{saving ? 'Сохранение...' : 'Сохранить'}</button>
+            {!!selected.payload && Object.keys(selected.payload as Record<string, unknown>).length > 0 && <><h3>Payload</h3><pre className="payload">{JSON.stringify(selected.payload, null, 2)}</pre></>}
+          </aside>
+        </div>
+      )}
     </AdminLayout>
   );
 }
