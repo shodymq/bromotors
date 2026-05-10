@@ -6,11 +6,12 @@ import { AppModule } from './modules/app.module';
 
 export function assertProductionEnv() {
   if (process.env.NODE_ENV !== 'production') return;
-  const missing = ['DATABASE_URL', 'ADMIN_EMAIL', 'ADMIN_PASSWORD', 'JWT_SECRET'].filter((key) => !process.env[key]);
+  const missing = ['DATABASE_URL', 'JWT_SECRET'].filter((key) => !process.env[key]);
   if (missing.length) {
     throw new Error(`Missing required production env: ${missing.join(', ')}`);
   }
-  if (process.env.ADMIN_PASSWORD === 'admin123456' || process.env.ADMIN_PASSWORD === 'BroMotors123!') {
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD;
+  if (adminPassword === 'admin123456' || adminPassword === 'BroMotors123!' || adminPassword === 'Br0Motors!2026_Admin#KZ') {
     throw new Error('Production ADMIN_PASSWORD must not use the local dev default');
   }
 }

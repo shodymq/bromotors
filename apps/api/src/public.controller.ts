@@ -3,6 +3,7 @@ import { Throttle } from '@nestjs/throttler';
 import { PrismaService } from './prisma.service';
 import { CarQueryDto, LeadDto, LeadType } from './dto';
 import { carOrder, carWhere, cleanText, publicCarInclude } from './helpers';
+import { storageStatus } from './supabase-storage';
 
 @Controller()
 export class PublicController {
@@ -11,7 +12,7 @@ export class PublicController {
   @Get('health')
   async health() {
     const db = this.prisma.isConnected() ? 'ok' : 'down';
-    return { ok: true, db };
+    return { ok: true, db, storage: storageStatus() };
   }
 
   @Get('ready')
