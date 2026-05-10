@@ -255,7 +255,7 @@ function DragDropUpload({ carId, onDone, onError }: { carId: string; onDone: () 
   const inputRef = useRef<HTMLInputElement>(null);
 
   const addFiles = useCallback((files: FileList | File[]) => {
-    const valid = Array.from(files).filter((f) => ['image/jpeg', 'image/png', 'image/webp'].includes(f.type));
+    const valid = Array.from(files).filter((f) => ['image/jpeg', 'image/png', 'image/webp'].includes(f.type) && f.size <= 5 * 1024 * 1024);
     setPreviews((prev) => [...prev, ...valid.map((file) => ({ file, url: URL.createObjectURL(file) }))].slice(0, 50));
   }, []);
 
@@ -272,16 +272,21 @@ function DragDropUpload({ carId, onDone, onError }: { carId: string; onDone: () 
   async function upload() {
     if (!previews.length) return;
     setUploading(true);
-    const fd = new FormData();
-    previews.forEach((p) => fd.append('files', p.file));
-    const res = await fetch(`${API}/admin/cars/${carId}/images`, { method: 'POST', body: fd, credentials: 'include' });
-    setUploading(false);
-    if (res.ok) {
+    try {
+      for (const preview of previews) {
+        const fd = new FormData();
+        fd.append('file', preview.file);
+        fd.append('carId', carId);
+        const res = await fetch(`${API}/admin/uploads/car-image`, { method: 'POST', body: fd, credentials: 'include' });
+        if (!res.ok) throw new Error(apiErrorMessage(res.status, await res.text()));
+      }
       previews.forEach((p) => URL.revokeObjectURL(p.url));
       setPreviews([]);
       onDone();
-    } else {
-      onError(await res.text());
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Ошибка загрузки фото');
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -296,9 +301,8 @@ function DragDropUpload({ carId, onDone, onError }: { carId: string; onDone: () 
       >
         <input ref={inputRef} type="file" multiple accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={(e) => e.target.files && addFiles(e.target.files)} />
         <div className="dd-hint">
-          <span style={{ fontSize: 28 }}>📸</span>
           <strong>Перетащите фото сюда или нажмите</strong>
-          <span className="meta">JPG, PNG, WEBP · до 50 фото · до 10 МБ каждое</span>
+          <span className="meta">JPG, PNG, WEBP · до 50 фото · до 5 МБ каждое</span>
         </div>
       </div>
       {previews.length > 0 && (

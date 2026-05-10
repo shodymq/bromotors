@@ -15,7 +15,7 @@ export function CarCard({ car, compare = true, credit }: { car: Car; compare?: b
   return (
     <article className="card">
       <Link className="photo" href={`/catalog/${car.slug}`}>
-        {cover && <Image src={cover.path} alt={cover.alt} width={720} height={540} sizes="(max-width: 620px) 100vw, (max-width: 900px) 50vw, 33vw" style={{ objectFit: 'contain', width: '100%', height: '100%' }} />}
+        {cover ? <Image src={cover.path} alt={cover.alt} width={720} height={540} sizes="(max-width: 620px) 100vw, (max-width: 900px) 50vw, 33vw" style={{ objectFit: 'contain', width: '100%', height: '100%' }} /> : <div className="image-placeholder" />}
       </Link>
       <div className="card-body">
         <div className="row">

@@ -42,7 +42,7 @@ export function Gallery({ car }: { car: Car }) {
         onTouchEnd={onTouchEnd}
         aria-label="Открыть галерею"
       >
-        {image && (
+        {image ? (
           <Image
             src={image.path}
             alt={image.alt}
@@ -51,7 +51,7 @@ export function Gallery({ car }: { car: Car }) {
             style={{ objectFit: 'contain' }}
             priority
           />
-        )}
+        ) : <div className="image-placeholder" />}
         {images.length > 1 && (
           <span className="gallery-counter">{active + 1} / {images.length}</span>
         )}

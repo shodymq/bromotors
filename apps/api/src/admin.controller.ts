@@ -10,10 +10,11 @@ import {
   Req,
   Res,
   UploadedFiles,
+  UploadedFile,
   UseInterceptors,
   UnauthorizedException,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
@@ -26,6 +27,7 @@ import { PrismaService } from './prisma.service';
 import { BrandDto, CarDto, CreditSettingDto, LeadUpdateDto, LoginDto, ModelDto, StatusDto } from './dto';
 import { publicCarInclude, slugify, cleanText } from './helpers';
 import { requireJwtSecret } from './auth.guard';
+import { removeCarImageFromStorage, storagePathFromPublicUrl, uploadCarImageToStorage } from './supabase-storage';
 
 const uploadDir = path.resolve(process.cwd(), process.env.UPLOAD_DIR || '../../apps/web/public/uploads/cars');
 
@@ -132,6 +134,45 @@ export class AdminController {
     return this.prisma.car.update({ where: { id }, data: { isPublished: false } });
   }
 
+  @Post('uploads/car-image')
+  @UseInterceptors(FileInterceptor('file', {
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      cb(null, ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype));
+    },
+  }))
+  async uploadCarImage(@UploadedFile() file: Express.Multer.File, @Body('carId') carId?: string) {
+    if (!file) throw new BadRequestException('JPEG, PNG or WEBP image up to 5MB is required');
+    const cleanCarId = cleanText(carId);
+    const car = cleanCarId ? await this.prisma.car.findUniqueOrThrow({ where: { id: cleanCarId } }) : null;
+    if (car) {
+      const imageCount = await this.prisma.carImage.count({ where: { carId: car.id } });
+      if (imageCount >= 50) throw new BadRequestException('Максимум 50 фото');
+    }
+    const uploaded = await uploadCarImageToStorage(file, cleanCarId);
+    if (!car) return uploaded;
+
+    const current = await this.prisma.carImage.count({ where: { carId: car.id } });
+    const image = await this.prisma.carImage.create({
+      data: {
+        carId: car.id,
+        path: uploaded.url,
+        alt: `${car.title} фото`,
+        sortOrder: current,
+        isCover: current === 0,
+      },
+    });
+    return { ...uploaded, image };
+  }
+
+  @Delete('uploads/car-image')
+  async deleteCarImageUpload(@Body('path') storagePath?: string) {
+    const path = cleanText(storagePath);
+    if (!path) throw new BadRequestException('Storage path is required');
+    return removeCarImageFromStorage(path);
+  }
+
   @Post('cars/:id/images')
   @UseInterceptors(FilesInterceptor('files', 50, {
     storage: multer.memoryStorage(),
@@ -186,8 +227,13 @@ export class AdminController {
   async deleteImage(@Param('id') id: string, @Param('imageId') imageId: string) {
     const image = await this.prisma.carImage.findUniqueOrThrow({ where: { id: imageId, carId: id } });
     await this.prisma.carImage.delete({ where: { id: imageId } });
-    const file = path.resolve(process.cwd(), '../../apps/web/public', image.path.replace(/^\//, ''));
-    if (file.startsWith(path.resolve(process.cwd(), '../../apps/web/public/uploads/cars')) && fs.existsSync(file)) fs.unlinkSync(file);
+    const storagePath = storagePathFromPublicUrl(image.path);
+    if (storagePath) {
+      await removeCarImageFromStorage(storagePath).catch(() => null);
+    } else {
+      const file = path.resolve(process.cwd(), '../../apps/web/public', image.path.replace(/^\//, ''));
+      if (file.startsWith(path.resolve(process.cwd(), '../../apps/web/public/uploads/cars')) && fs.existsSync(file)) fs.unlinkSync(file);
+    }
     return { ok: true };
   }
 
